@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Netzwerkplan</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#06090f;--bright:#dce8f8;--text:#8a9db8;--muted:#3e5068;--accent:#2e9cff;--green:#22d68a;--orange:#f5923a;--red:#ef5350;--purple:#a855f7;--yellow:#d4aa32;--teal:#20c9b0;--blue2:#5b8af5;--green2:#5ee85e}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;overflow:hidden;user-select:none}
+.mono{font-family:'JetBrains Mono','Fira Code',monospace}
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(6,9,15,.94);backdrop-filter:blur(12px);border-bottom:1px solid rgba(26,37,64,.4);padding:7px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:5px}
+.header h1{font-size:15px;font-weight:700;color:var(--bright)}.header h1 em{color:var(--accent);font-style:normal}
+.header p{font-size:7.5px;color:var(--muted);margin-top:1px}
+.toolbar{display:flex;gap:3px;align-items:center;flex-wrap:wrap}
+.btn{border:none;border-radius:5px;padding:4px 9px;font-size:8.5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-weight:600;transition:all .15s;white-space:nowrap}.btn:hover{filter:brightness(1.25);transform:translateY(-1px)}
+.btn-a{background:rgba(46,156,255,.1);border:1px solid rgba(46,156,255,.25);color:var(--accent)}
+.btn-g{background:rgba(34,214,138,.1);border:1px solid rgba(34,214,138,.25);color:var(--green)}
+.btn-o{background:rgba(245,146,58,.1);border:1px solid rgba(245,146,58,.25);color:var(--orange)}
+.btn-t{background:rgba(32,201,176,.1);border:1px solid rgba(32,201,176,.25);color:var(--teal)}
+.btn-r{background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.25);color:var(--red)}
+.zoom-bar{display:flex;align-items:center;gap:4px;margin-left:auto}
+.zoom-bar label{font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.zoom-bar input[type=range]{width:60px;accent-color:var(--accent);cursor:pointer;height:14px}
+.zoom-val{font-size:8px;color:var(--accent);min-width:26px;text-align:center}
+.tab-bar{position:fixed;top:46px;left:0;right:0;z-index:99;background:rgba(6,9,15,.92);backdrop-filter:blur(10px);border-bottom:1px solid rgba(26,37,64,.35);display:flex;padding:0 16px;gap:2px}
+.tab-btn{padding:6px 14px;font-size:9.5px;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;transition:all .15s}.tab-btn:hover{color:var(--text)}.tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);background:rgba(46,156,255,.04)}
+.tab-content{display:none}.tab-content.active{display:block}
+.viewport{position:fixed;top:78px;left:0;right:0;bottom:0;overflow:hidden;cursor:grab}.viewport.panning{cursor:grabbing}
+.world{position:absolute;transform-origin:0 0;will-change:transform}
+.world svg{position:absolute;top:0;left:0;z-index:1;overflow:visible;pointer-events:none}
+.world svg .conn-hit{pointer-events:all;cursor:pointer}
+.world svg .wp-handle{pointer-events:all;cursor:grab}
+.table-view{position:fixed;top:78px;left:0;right:0;bottom:0;overflow:auto;padding:14px 18px 40px;background:var(--bg)}
+.tv-section{max-width:1020px;margin:0 auto 20px}
+.tv-title{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--bright);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.tv-count{font-size:8px;color:var(--muted);background:rgba(255,255,255,.04);border-radius:10px;padding:1px 7px}
+table.nt{width:100%;border-collapse:collapse;font-size:9.5px}
+table.nt th{text-align:left;padding:5px 8px;font-size:7.5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);border-bottom:1px solid rgba(26,37,64,.5);font-weight:500}
+table.nt td{padding:5px 8px;border-bottom:1px solid rgba(26,37,64,.2);vertical-align:middle}
+table.nt tr:hover td{background:rgba(46,156,255,.03)}
+table.nt textarea{background:rgba(0,0,0,.3);border:1px solid #1c2844;border-radius:3px;padding:2px 5px;color:var(--bright);font-size:9.5px;font-family:'JetBrains Mono',monospace;outline:none;width:100%;resize:vertical;min-height:22px;field-sizing:content}
+table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;border-radius:3px;background:rgba(0,0,0,.3);cursor:pointer;padding:1px}
+.cd{width:9px;height:9px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+.t-rm{width:20px;height:20px;border-radius:3px;border:none;background:rgba(239,83,80,.08);color:var(--red);font-size:9px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}.t-rm:hover{background:rgba(239,83,80,.2)}
+.vb{display:inline-block;padding:2px 7px;border-radius:4px;font-size:8.5px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.tv-legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;padding:7px 10px;background:rgba(0,0,0,.15);border-radius:7px;border:1px solid rgba(26,37,64,.2)}
+.tv-legend-item{display:flex;align-items:center;gap:3px;font-size:8px;color:var(--muted)}
+.node{position:absolute;border-radius:10px;padding:8px 10px;cursor:grab;transition:border-color .2s,box-shadow .2s,background .15s;z-index:3;backdrop-filter:blur(6px)}.node:hover{z-index:6;box-shadow:0 6px 24px rgba(0,0,0,.35)}.node.dragging-node{cursor:grabbing;z-index:20;opacity:.9;transition:none}
+.n-head{display:flex;align-items:center;gap:4px;margin-bottom:2px}.n-icon{font-size:11px}.n-label{font-size:9.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.n-sub{font-size:7px;opacity:.6;margin-top:1px}.n-detail{font-size:7.5px;color:var(--muted);margin-top:2px;line-height:1.3}
+.chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px}
+.chip{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.25);border:1px solid rgba(26,37,58,.8);border-radius:3px;padding:1px 5px;font-size:7.5px;cursor:pointer;transition:all .12s}.chip:hover{border-color:currentColor;background:rgba(255,255,255,.04)}
+.del-chip{margin-left:auto;color:var(--red);font-size:7px;padding:1px 3px;cursor:pointer;opacity:.3;transition:opacity .15s}.del-chip:hover{opacity:1}
+.cloud-node{position:absolute;z-index:3;cursor:grab;text-align:center;transition:all .2s}.cloud-node:hover{filter:brightness(1.15)}.cloud-node.dragging-node{cursor:grabbing;z-index:20;opacity:.9;transition:none}
+.port-label{position:absolute;z-index:8;cursor:grab;display:flex;align-items:flex-start;gap:2px;user-select:none}
+.port-label.dragging{cursor:grabbing;z-index:20;opacity:.85}
+.port-label .pl-dot{width:4px;height:4px;border-radius:50%;opacity:.6;flex-shrink:0;margin-top:5px}
+.port-label textarea{background:rgba(6,9,15,.92);border:1px solid rgba(100,120,160,.25);border-radius:3px;padding:2px 4px;font-size:7px;font-family:'JetBrains Mono',monospace;outline:none;text-align:center;min-width:30px;width:50px;min-height:16px;height:16px;backdrop-filter:blur(4px);cursor:pointer;color:inherit;resize:none;overflow:hidden;line-height:1.4}
+.port-label textarea:focus{border-color:rgba(200,200,255,.45);cursor:text;overflow:auto}
+.port-label .pl-rm{width:11px;height:11px;border-radius:2px;border:none;background:rgba(239,83,80,.1);color:var(--red);font-size:5px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0;transition:opacity .12s;flex-shrink:0;margin-top:2px}.port-label:hover .pl-rm{opacity:1}
+.conn-popover{position:fixed;z-index:50;background:linear-gradient(180deg,#151d2f,#111827);border:1px solid rgba(46,156,255,.3);border-radius:10px;min-width:280px;box-shadow:0 16px 50px rgba(0,0,0,.6);animation:cpop .15s ease}
+@keyframes cpop{from{opacity:0;transform:translateY(6px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+.conn-popover .cp-head{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;cursor:grab;border-bottom:1px solid rgba(46,156,255,.15);border-radius:10px 10px 0 0;background:rgba(46,156,255,.04)}
+.conn-popover .cp-head.dragging-pop{cursor:grabbing}
+.conn-popover .cp-title{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--accent)}
+.conn-popover .cp-close{width:20px;height:20px;border-radius:4px;border:none;background:rgba(255,255,255,.06);color:var(--muted);font-size:10px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.conn-popover .cp-body{padding:10px 12px}
+.conn-popover .cp-field{margin-bottom:6px}
+.conn-popover .cp-field label{display:block;font-size:7.5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
+.conn-popover .cp-field select,.conn-popover .cp-field input,.conn-popover .cp-field textarea{width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;outline:none}
+.conn-popover .cp-field textarea{font-family:'JetBrains Mono',monospace;resize:vertical;min-height:28px;field-sizing:content}
+.conn-popover .cp-field select{cursor:pointer}
+.modal-overlay{position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.72);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:16px;animation:mf .12s ease}
+@keyframes mf{from{opacity:0}to{opacity:1}}@keyframes ms{from{opacity:0;transform:translateY(12px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.modal{background:linear-gradient(180deg,#111827,#0d1220);border-radius:14px;width:100%;max-width:580px;max-height:85vh;overflow:hidden;display:flex;flex-direction:column;animation:ms .18s ease}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:11px 15px;flex-shrink:0}
+.modal-head h2{font-size:12px;font-weight:700}
+.modal-close{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:6px;width:24px;height:24px;color:var(--muted);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:11px 15px;overflow-y:auto;flex:1}
+.field{margin-bottom:5px}.field label{display:block;font-size:7.5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:2px}
+.field input,.field select{width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;outline:none;transition:border .2s}
+.field input:focus{border-color:rgba(46,156,255,.5)}.field input.mi{font-family:'JetBrains Mono',monospace}
+.fr{display:flex;gap:6px;flex-wrap:wrap}.fr .field{flex:1 1 45%;min-width:110px}
+.sep{height:1px;background:#1a2540;margin:9px 0}
+.sl{font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:4px}
+.color-field{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:6px 8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid #1a2540}
+.color-field label{font-size:7.5px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.color-field input[type=color]{width:32px;height:24px;border:1px solid rgba(255,255,255,.15);border-radius:4px;padding:0;cursor:pointer;background:transparent}
+.color-field .color-hex{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--bright);opacity:.6}
+.dv-block{background:rgba(0,0,0,.2);border-radius:6px;border:1px solid #1a2540;padding:8px;margin-bottom:5px;border-left:3px solid rgba(100,100,100,.25)}.dv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.dv-name{font-size:8.5px;font-weight:600}.dv-rm{background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.2);border-radius:3px;padding:2px 5px;color:var(--red);font-size:6.5px;cursor:pointer}
+.add-dv{width:100%;background:rgba(34,214,138,.06);border:1px dashed rgba(34,214,138,.25);border-radius:5px;padding:6px;color:var(--green);font-size:8.5px;cursor:pointer;font-weight:600}
+.empty-hint{position:absolute;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="header">
+  <div><h1 class="mono"><em>⬡</em> NETZWERKPLAN</h1><p class="mono">Knoten ziehen · Verbindungen klicken</p></div>
+  <div class="toolbar">
+    <button class="btn btn-o" onclick="addNode('firewall')">+ ⛊ Firewall</button>
+    <button class="btn btn-a" onclick="addNode('router')">+ ⬡ Router</button>
+    <button class="btn btn-t" onclick="addNode('switch')">+ ⬢ Switch</button>
+    <button class="btn btn-t" onclick="addNode('internet')">+ ☁ Internet</button>
+    <button class="btn btn-g" onclick="addNode('vlan')">+ ◉ VLAN</button>
+    <button class="btn btn-g" onclick="openAddConn()">+ Verbindung</button>
+    <button class="btn btn-o" id="impBtn" onclick="doImport()">↑ Import</button>
+    <button class="btn btn-a" onclick="doExport()">↓ Export</button>
+    <input type="file" id="fileIn" accept=".json" style="display:none" onchange="handleImport(event)">
+  </div>
+</div>
+<div class="tab-bar"><button class="tab-btn active" data-tab="topo" onclick="switchTab('topo')">⬡ Topologie</button><button class="tab-btn" data-tab="table" onclick="switchTab('table')">☰ Übersicht</button><div class="zoom-bar" id="zoomBar"><label class="mono">Zoom</label><input type="range" id="zoomSlider" min="40" max="250" value="100" oninput="setZoom(+this.value)"><span class="zoom-val mono" id="zoomVal">100%</span></div></div>
+<div class="tab-content active" id="tab-topo"><div class="viewport" id="viewport"><div class="world" id="world"><svg id="svg" width="3000" height="3000" style="width:3000px;height:3000px"></svg></div></div></div>
+<div class="tab-content" id="tab-table"><div class="table-view" id="tableView"></div></div>
+<div id="modalRoot"></div>
+<div id="popoverRoot"></div>
+
+<script>
+/* ═══ STATE ═══ */
+let nodes=[],conns=[];
+let nxId=0,zoom=1,panX=0,panY=0,activeTab="topo",highlightedConn=null;
+let dragNode=null,dragStartX=0,dragStartY=0,dragOrigX=0,dragOrigY=0,dragMoved=false;
+let dragWp=null;
+const COLORS=["#ff6b6b","#ffd93d","#6bcb77","#4d96ff","#ff922b","#cc5de8","#20c997","#f06595","#7950f2","#22b8cf","#e64980","#fab005"];
+const NT={firewall:{label:"Firewall",icon:"⛊",color:"#f5923a"},router:{label:"Router",icon:"⬡",color:"#5b8af5"},switch:{label:"Switch",icon:"⬢",color:"#20c9b0"},internet:{label:"Internet",icon:"☁",color:"#8899bb"},vlan:{label:"Neues VLAN",icon:"◉",color:null}};
+const ICONS=["⬡","⬢","◉","◎","⎙","☁","⬟","△","▢","⏣","🖥","📡","🔌","📠","🏷","⛊"];
+
+function nById(id){return nodes.find(n=>n.id===id)}
+function escH(s){return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+
+/* ═══ ZOOM / PAN ═══ */
+const vp=document.getElementById("viewport"),world=document.getElementById("world");
+let isPan=false,psx,psy,pox,poy;
+vp.addEventListener("mousedown",e=>{if(e.target.closest(".node,.cloud-node,.port-label,.conn-popover,.conn-hit,.wp-handle"))return;isPan=true;vp.classList.add("panning");psx=e.clientX;psy=e.clientY;pox=panX;poy=panY;closePopover()});
+window.addEventListener("mousemove",e=>{if(isPan){panX=pox+(e.clientX-psx);panY=poy+(e.clientY-psy);applyTf()}if(dragNode)handleDrag(e);if(dragWp)handleWpDrag(e)});
+window.addEventListener("mouseup",e=>{isPan=false;vp.classList.remove("panning");if(dragNode)endDrag(e);if(dragWp){dragWp=null}});
+vp.addEventListener("wheel",e=>{e.preventDefault();const r=vp.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,oz=zoom;let nz=zoom*(e.deltaY<0?1.08:1/1.08);nz=Math.max(.25,Math.min(3.5,nz));panX=mx-(mx-panX)*(nz/oz);panY=my-(my-panY)*(nz/oz);zoom=nz;document.getElementById("zoomSlider").value=Math.round(zoom*100);document.getElementById("zoomVal").textContent=Math.round(zoom*100)+"%";applyTf()},{passive:false});
+function setZoom(v){const r=vp.getBoundingClientRect(),cx=r.width/2,cy=r.height/2,oz=zoom,nz=v/100;panX=cx-(cx-panX)*(nz/oz);panY=cy-(cy-panY)*(nz/oz);zoom=nz;document.getElementById("zoomVal").textContent=v+"%";applyTf()}
+function applyTf(){world.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`}
+function centerView(){const r=vp.getBoundingClientRect();if(nodes.length===0){panX=r.width/2-1500*zoom;panY=r.height/2-1500*zoom}else{let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;nodes.forEach(n=>{x1=Math.min(x1,n.x);y1=Math.min(y1,n.y);x2=Math.max(x2,n.x);y2=Math.max(y2,n.y)});panX=r.width/2-((x1+x2)/2)*zoom;panY=r.height/2-((y1+y2)/2)*zoom+20}applyTf()}
+
+/* ═══ NODE DRAG ═══ */
+function startDrag(e,id,el){if(e.target.closest(".del-chip"))return;e.preventDefault();e.stopPropagation();const n=nById(id);if(!n)return;dragNode={id,el};dragStartX=e.clientX;dragStartY=e.clientY;dragOrigX=n.x;dragOrigY=n.y;dragMoved=false;el.classList.add("dragging-node");closePopover()}
+function handleDrag(e){if(!dragNode)return;const dx=(e.clientX-dragStartX)/zoom,dy=(e.clientY-dragStartY)/zoom;if(Math.abs(dx)>3||Math.abs(dy)>3)dragMoved=true;const n=nById(dragNode.id);if(!n)return;n.x=dragOrigX+dx;n.y=dragOrigY+dy;const w=parseFloat(dragNode.el.style.width)||160;if(n.type==="internet"){dragNode.el.style.left=(n.x-78)+"px";dragNode.el.style.top=(n.y-34)+"px"}else{dragNode.el.style.left=(n.x-w/2)+"px";dragNode.el.style.top=n.y+"px"}renderSVG();renderPL()}
+function endDrag(e){if(!dragNode)return;dragNode.el.classList.remove("dragging-node");const wasDrag=dragMoved,nk=dragNode.id;dragNode=null;if(!wasDrag)openNodeModal(nk)}
+
+/* ═══ VIA: node refs {id:"n_3"} + free points {x,y} ═══ */
+function resolveVia(c){return(c.via||[]).map(v=>{if(v.id){const n=nById(v.id);return n?{x:n.x,y:n.y,isNode:true,nodeId:v.id}:null}return{x:v.x,y:v.y}}).filter(Boolean)}
+function startWpDrag(cid,wi,e){const c=conns.find(cn=>cn.id===cid);if(!c?.via?.[wi])return;if(c.via[wi].id)return;e.preventDefault();e.stopPropagation();dragWp={c,wi,sx:e.clientX,sy:e.clientY,ox:c.via[wi].x,oy:c.via[wi].y}}
+function handleWpDrag(e){if(!dragWp)return;dragWp.c.via[dragWp.wi].x=dragWp.ox+(e.clientX-dragWp.sx)/zoom;dragWp.c.via[dragWp.wi].y=dragWp.oy+(e.clientY-dragWp.sy)/zoom;renderSVG();renderPL()}
+function addWaypoint(cid,segIdx,e){const c=conns.find(cn=>cn.id===cid);if(!c)return;if(!c.via)c.via=[];const r=vp.getBoundingClientRect();c.via.splice(segIdx,0,{x:(e.clientX-r.left-panX)/zoom,y:(e.clientY-r.top-panY)/zoom});renderSVG();renderPL()}
+function removeVia(cid,wi){const c=conns.find(cn=>cn.id===cid);if(c?.via){c.via.splice(wi,1);const pop=document.getElementById("connPop");const px=parseFloat(pop?.style.left||100),py=parseFloat(pop?.style.top||100);render();openConnPopover(cid,px,py)}}
+function addViaNode(cid,nodeId){const c=conns.find(cn=>cn.id===cid);if(!c||!nodeId)return;if(!c.via)c.via=[];c.via.push({id:nodeId});const pop=document.getElementById("connPop");const px=parseFloat(pop?.style.left||100),py=parseFloat(pop?.style.top||100);render();openConnPopover(cid,px,py)}
+
+/* ═══ COMPUTE LINES ═══ */
+function computeLines(){
+  const groups=new Map(),SPACING=7,result=[];
+  conns.forEach(c=>{const fn=nById(c.from),tn=nById(c.to);if(!fn||!tn)return;const k=[c.from,c.to].sort().join("|");if(!groups.has(k))groups.set(k,[]);groups.get(k).push(c)});
+  for(const[key,entries] of groups){
+    const n=entries.length;
+    entries.forEach((c,i)=>{
+      const fn=nById(c.from),tn=nById(c.to);if(!fn||!tn)return;
+      const viaPts=resolveVia(c);
+      const raw=[{x:fn.x,y:fn.y},...viaPts,{x:tn.x,y:tn.y}];
+      const off=(i-(n-1)/2)*SPACING;
+      const pts=raw.map((p,pi)=>{
+        let dx,dy;
+        if(pi===0){dx=raw[1].x-p.x;dy=raw[1].y-p.y}
+        else if(pi===raw.length-1){dx=p.x-raw[pi-1].x;dy=p.y-raw[pi-1].y}
+        else{dx=raw[pi+1].x-raw[pi-1].x;dy=raw[pi+1].y-raw[pi-1].y}
+        const l=Math.sqrt(dx*dx+dy*dy)||1;
+        return{x:p.x+(-dy/l)*off,y:p.y+(dx/l)*off};
+      });
+      result.push({c,pts,key});
+    });
+  }
+  return result;
+}
+
+/* ═══ RENDER ═══ */
+function render(){renderSVG();renderNodes();renderPL();if(activeTab==="table")renderTableView()}
+
+function renderSVG(){
+  const svg=document.getElementById("svg");let h='';
+  const lines=computeLines();
+  const sorted=[...lines].sort((a,b)=>(highlightedConn===a.c.id?1:0)-(highlightedConn===b.c.id?1:0));
+  sorted.forEach(L=>{
+    const col=L.c.color||"#888",isHl=highlightedConn===L.c.id,pts=L.pts;
+    const sw=isHl?5:2,op=isHl?.85:.5;
+    if(isHl){for(let i=0;i<pts.length-1;i++)h+=`<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="${col}" stroke-opacity=".25" stroke-width="14" stroke-linecap="round"/>`}
+    for(let i=0;i<pts.length-1;i++)h+=`<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="${col}" stroke-opacity="${op}" stroke-width="${sw}"/>`;
+    const li=pts.length-1,mx=(pts[li-1].x+pts[li].x)/2,my=(pts[li-1].y+pts[li].y)/2,a=Math.atan2(pts[li].y-pts[li-1].y,pts[li].x-pts[li-1].x)*180/Math.PI;
+    h+=`<polygon points="-4,-2.5 4,0 -4,2.5" fill="${col}" fill-opacity="${isHl?.9:.55}" transform="translate(${mx},${my}) rotate(${a})"/>`;
+  });
+  sorted.forEach(L=>{const pts=L.pts;for(let i=0;i<pts.length-1;i++)h+=`<line class="conn-hit" x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="transparent" stroke-width="7" data-cid="${L.c.id}" data-seg="${i}"/>`});
+  if(highlightedConn!=null){sorted.filter(L=>L.c.id===highlightedConn).forEach(L=>{(L.c.via||[]).forEach((v,wi)=>{const p=L.pts[wi+1];if(!p)return;const isN=!!v.id;h+=`<circle class="wp-handle" cx="${p.x}" cy="${p.y}" r="${isN?6:5}" fill="${isN?'rgba(46,156,255,.6)':L.c.color||'#888'}" fill-opacity=".7" stroke="${isN?'var(--accent)':'white'}" stroke-width="1.5" data-cid="${L.c.id}" data-wi="${wi}"/>`})})}
+  svg.innerHTML=h;
+  svg.querySelectorAll(".conn-hit").forEach(el=>{
+    el.addEventListener("click",function(e){e.stopPropagation();openConnPopover(parseInt(this.dataset.cid),e.clientX,e.clientY)});
+    el.addEventListener("dblclick",function(e){e.stopPropagation();addWaypoint(parseInt(this.dataset.cid),parseInt(this.dataset.seg),e)});
+  });
+  svg.querySelectorAll(".wp-handle").forEach(el=>{
+    el.addEventListener("mousedown",function(e){startWpDrag(parseInt(this.dataset.cid),parseInt(this.dataset.wi),e)});
+    el.addEventListener("contextmenu",function(e){e.preventDefault();removeVia(parseInt(this.dataset.cid),parseInt(this.dataset.wi))});
+  });
+}
+
+function renderNodes(){
+  document.querySelectorAll(".node,.cloud-node,.empty-hint").forEach(el=>el.remove());
+  const w=document.getElementById("world");
+  if(nodes.length===0){const h=document.createElement("div");h.className="empty-hint";h.style.cssText="position:absolute;left:1500px;top:1500px;transform:translate(-50%,-50%)";h.innerHTML='<div style="font-size:28px;margin-bottom:8px;opacity:.3">⬡</div><div>Knoten über die Toolbar hinzufügen</div><div style="font-size:8px;margin-top:4px;opacity:.5">oder JSON importieren</div>';w.appendChild(h);return}
+  nodes.forEach(node=>{
+    if(node.type==="internet"){
+      const el=document.createElement("div");el.className="cloud-node";el.dataset.nid=node.id;el.style.cssText=`left:${node.x-78}px;top:${node.y-34}px;width:156px`;
+      el.innerHTML=`<svg width="116" height="46" viewBox="0 0 120 48" style="display:block;margin:0 auto"><path d="M28,40 C12,40 4,32 4,24 C4,16 12,10 22,10 C24,4 32,0 42,0 C54,0 64,6 66,14 C68,13 71,12 74,12 C84,12 92,18 92,26 C92,26 94,22 100,22 C110,22 116,28 116,34 C116,40 110,44 100,44 L28,44 Z" fill="rgba(136,153,187,.06)" stroke="${node.color}" stroke-width="1.5" stroke-opacity=".5"/></svg><div class="mono" style="font-size:9.5px;font-weight:700;color:${node.color};margin-top:2px">${escH(node.label)}</div><div style="display:flex;justify-content:center;gap:3px;margin-top:1px"><span class="mono" style="font-size:7.5px;color:var(--muted)">${node.config.ip||"Klicken"}</span><span class="del-chip chip" data-nid="${node.id}" style="margin-left:0;font-size:6px;padding:0 3px">✕</span></div>`;
+      wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
+    } else if(node.type==="vlan"){
+      const devs=node.config.devices||[],el=mkN(node,170);el.style.minHeight="60px";
+      let ch=devs.slice(0,5).map(d=>`<span class="chip mono" style="color:${node.color}">${d.icon||"⎙"} ${escH(d.name.length>7?d.name.slice(0,7)+"…":d.name)}</span>`).join("");
+      if(devs.length>5)ch+=`<span class="chip mono" style="color:${node.color}">+${devs.length-5}</span>`;
+      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${node.config.vlanId?"VLAN "+node.config.vlanId:"VLAN —"}</div><div class="n-detail">${node.config.subnet||"Klicken"} · ${devs.length} Geräte</div>${ch?'<div class="chips">'+ch+'</div>':""}`;
+      wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
+    } else {
+      const tl={firewall:"FIREWALL",router:"ROUTER",switch:"SWITCH"};
+      const el=mkN(node,170);
+      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${tl[node.type]||node.type.toUpperCase()}</div><div class="n-detail">${node.config.ip||"Klicken"}${node.config.model?" · "+escH(node.config.model):""}</div>`;
+      wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
+    }
+  });
+}
+function mkN(node,w){const el=document.createElement("div");el.className="node";el.dataset.nid=node.id;el.style.cssText=`left:${node.x-w/2}px;top:${node.y}px;width:${w}px;transform:translateY(-50%);background:linear-gradient(135deg,${node.color}0c,rgba(6,9,15,.75));border:1px solid ${node.color}25`;return el}
+function wireDel(el){el.querySelectorAll(".del-chip").forEach(b=>{b.addEventListener("click",function(e){e.stopPropagation();e.preventDefault();deleteNode(this.dataset.nid)});b.addEventListener("mousedown",e=>e.stopPropagation())})}
+
+/* PORT LABELS */
+function renderPL(){
+  document.querySelectorAll(".port-label").forEach(el=>el.remove());
+  const w=document.getElementById("world"),lines=computeLines(),ld=[];
+  lines.forEach(L=>{
+    const col=L.c.color||"#888",ps=L.c.port||"";
+    let lx,ly;
+    if(L.c.lx!=null){lx=L.c.lx;ly=L.c.ly;ld.push({L,col,ps,lx,ly,man:true})}
+    else{const p0=L.pts[0],p1=L.pts[1]||p0,t=.3;lx=p0.x+(p1.x-p0.x)*t;ly=p0.y+(p1.y-p0.y)*t;const dx=p1.x-p0.x,dy=p1.y-p0.y,len=Math.sqrt(dx*dx+dy*dy)||1;lx+=(-dy/len)*12;ly+=(dx/len)*12;ld.push({L,col,ps,lx,ly,man:false})}
+  });
+  const LW=75,LH=20;
+  for(let p=0;p<6;p++)for(let i=0;i<ld.length;i++){if(ld[i].man)continue;for(let j=0;j<ld.length;j++){if(i===j)continue;const a=ld[i],b=ld[j],dx=a.lx-b.lx,dy=a.ly-b.ly,ox=LW-Math.abs(dx),oy=LH-Math.abs(dy);if(ox>0&&oy>0){if(ox<oy){const p2=ox/2+2;a.lx+=dx>=0?p2:-p2;if(!b.man)b.lx+=dx>=0?-p2:p2}else{const p2=oy/2+2;a.ly+=dy>=0?p2:-p2;if(!b.man)b.ly+=dy>=0?-p2:p2}}}}
+  ld.forEach(l=>{
+    const el=document.createElement("div");el.className="port-label";el.style.left=l.lx+"px";el.style.top=l.ly+"px";el.style.color=l.col;el.dataset.connId=l.L.c.id;
+    const ck=l.L.key;
+    const ta=document.createElement("textarea");
+    ta.value=l.ps||"";ta.placeholder="Port(s)";ta.style.cssText=`color:${l.col};border-color:${l.col}33`;
+    if(l.L.c.plw){ta.style.width=l.L.c.plw+"px";ta.style.height=(l.L.c.plh||16)+"px";ta.style.fieldSizing="fixed"}
+    ta.addEventListener("click",function(e){e.stopPropagation();openConnPopover(l.L.c.id,e.clientX,e.clientY)});
+    ta.addEventListener("input",function(){const cn=conns.find(c=>c.id===l.L.c.id);if(cn)cn.port=this.value});
+    ta.addEventListener("mousemove",function(e){const r=this.getBoundingClientRect();this.style.cursor=(r.right-e.clientX<10&&r.bottom-e.clientY<10)?"nwse-resize":"pointer"});
+    ta.addEventListener("mousedown",function(e){const r=this.getBoundingClientRect();if(r.right-e.clientX>10||r.bottom-e.clientY>10)return;e.preventDefault();e.stopPropagation();const sx=e.clientX,sy=e.clientY,sw=this.offsetWidth,sh=this.offsetHeight,self=this;function mv(ev){self.style.fieldSizing="fixed";self.style.width=Math.max(30,sw+(ev.clientX-sx)/zoom)+"px";self.style.height=Math.max(16,sh+(ev.clientY-sy)/zoom)+"px"}function up(){document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);const cn=conns.find(c=>c.id===l.L.c.id);if(cn){cn.plw=self.offsetWidth;cn.plh=self.offsetHeight}}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)});
+    el.innerHTML=`<div class="pl-dot" style="background:${l.col}"></div>`;el.appendChild(ta);
+    const rm=document.createElement("button");rm.className="pl-rm";rm.textContent="✕";rm.title="Entfernen";
+    rm.addEventListener("click",function(e){e.stopPropagation();conns=conns.filter(c=>c.id!==l.L.c.id);closePopover();render()});
+    el.appendChild(rm);w.appendChild(el);initPlDrag(el);
+    if(!l.man){const o=conns.find(c=>c.id===l.L.c.id);if(o){o.lx=l.lx;o.ly=l.ly}}
+  });
+}
+function initPlDrag(el){el.addEventListener("mousedown",function(e){if(e.target.tagName==="TEXTAREA"||e.target.tagName==="BUTTON")return;e.preventDefault();e.stopPropagation();el.classList.add("dragging");const cid=parseInt(el.dataset.connId),sx=e.clientX,sy=e.clientY,ol=parseFloat(el.style.left),ot=parseFloat(el.style.top);function mv(ev){el.style.left=(ol+(ev.clientX-sx)/zoom)+"px";el.style.top=(ot+(ev.clientY-sy)/zoom)+"px"}function up(){el.classList.remove("dragging");const cn=conns.find(c=>c.id===cid);if(cn){cn.lx=parseFloat(el.style.left);cn.ly=parseFloat(el.style.top)}document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up)}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)})}
+
+/* ═══ POPOVER ═══ */
+function openConnPopover(connId,screenX,screenY){
+  closePopover();
+  const cn=conns.find(c=>c.id===connId);if(!cn)return;
+  highlightedConn=connId;renderSVG();
+  let px=Math.min(screenX,window.innerWidth-300),py=Math.min(screenY,window.innerHeight-280);if(px<10)px=10;if(py<10)py=10;
+  const opts=k=>nodes.map(n=>`<option value="${n.id}"${n.id===k?" selected":""}>${n.icon} ${escH(n.label)}</option>`).join("");
+  const via=cn.via||[];
+  let viaHtml='';if(via.length){viaHtml='<div class="cp-field"><label>Route</label><div style="display:flex;flex-direction:column;gap:2px">';via.forEach((v,i)=>{const canUp=i>0,canDn=i<via.length-1;const arrows=`<span style="display:flex;flex-direction:column;gap:0;margin-left:auto">${canUp?`<button style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:8px;padding:0;line-height:1" onclick="moveVia(${cn.id},${i},-1)">▲</button>`:''}${canDn?`<button style="border:none;background:none;color:var(--muted);cursor:pointer;font-size:8px;padding:0;line-height:1" onclick="moveVia(${cn.id},${i},1)">▼</button>`:''}</span>`;if(v.id){const vn=nById(v.id);viaHtml+=`<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;background:rgba(46,156,255,.06);border:1px solid rgba(46,156,255,.15);border-radius:4px"><span class="mono" style="font-size:8px;color:var(--accent)">${vn?vn.icon+" "+escH(vn.label):v.id}</span>${arrows}<button class="btn btn-r" style="font-size:6px;padding:1px 4px" onclick="removeVia(${cn.id},${i})">✕</button></div>`}else{viaHtml+=`<div style="display:flex;align-items:center;gap:4px;padding:2px 4px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.08);border-radius:4px"><span class="mono" style="font-size:8px;color:var(--muted)">Wegpunkt</span>${arrows}<button class="btn btn-r" style="font-size:6px;padding:1px 4px" onclick="removeVia(${cn.id},${i})">✕</button></div>`}});viaHtml+='</div></div>'}
+  const availableNodes=nodes.filter(n=>n.id!==cn.from&&n.id!==cn.to&&!via.some(v=>v.id===n.id));
+  const addViaOpts=availableNodes.map(n=>`<option value="${n.id}">${n.icon} ${escH(n.label)}</option>`).join("");
+  document.getElementById("popoverRoot").innerHTML=`<div class="conn-popover" id="connPop" style="left:${px}px;top:${py}px" onclick="event.stopPropagation()">
+    <div class="cp-head" id="cpHead"><span class="cp-title">⚡ Verbindung #${cn.id}</span><button class="cp-close" onclick="closePopover()">✕</button></div>
+    <div class="cp-body">
+      <div class="cp-field"><label>Quelle</label><select id="cpFrom" onchange="cpUpdate(${cn.id})">${opts(cn.from)}</select></div>
+      <div class="cp-field"><label>Ziel</label><select id="cpTo" onchange="cpUpdate(${cn.id})">${opts(cn.to)}</select></div>
+      ${viaHtml}
+      <div class="cp-field"><label>Knoten hinzufügen</label><select onchange="if(this.value){addViaNode(${cn.id},this.value)}" style="width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;cursor:pointer"><option value="">— Knoten wählen —</option>${addViaOpts}</select></div>
+      <div class="cp-field"><label>Port(s)</label><textarea id="cpPort" class="mi" oninput="cpUpdate(${cn.id})" placeholder="443, 8080">${escH(cn.port)}</textarea></div>
+      <div class="cp-field"><label>Farbe</label><input type="color" id="cpColor" value="${cn.color}" oninput="cpUpdate(${cn.id})" style="width:100%;height:28px;border:1px solid #1c2844;border-radius:5px;background:rgba(0,0,0,.3);cursor:pointer"></div>
+      <button class="btn btn-r" style="width:100%;margin-top:8px;padding:6px" onclick="deleteConn(${cn.id})">✕ Verbindung löschen</button>
+    </div></div>`;
+  const head=document.getElementById("cpHead"),pop=document.getElementById("connPop");
+  head.addEventListener("mousedown",e=>{if(e.target.tagName==="BUTTON")return;e.preventDefault();const sx=e.clientX,sy=e.clientY,ox=parseFloat(pop.style.left),oy=parseFloat(pop.style.top);head.classList.add("dragging-pop");function mv(ev){pop.style.left=(ox+(ev.clientX-sx))+"px";pop.style.top=(oy+(ev.clientY-sy))+"px"}function up(){head.classList.remove("dragging-pop");document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up)}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)});
+  setTimeout(()=>document.addEventListener("mousedown",popOutClick),10);
+}
+function popOutClick(e){if(!e.target.closest(".conn-popover,.port-label,.conn-hit,.wp-handle")){closePopover();document.removeEventListener("mousedown",popOutClick)}}
+function cpUpdate(cid){
+  const cn=conns.find(c=>c.id===cid);if(!cn)return;
+  cn.from=document.getElementById("cpFrom").value;cn.to=document.getElementById("cpTo").value;
+  cn.port=document.getElementById("cpPort").value;cn.color=document.getElementById("cpColor").value;
+  renderSVG();renderNodes();renderPL();
+}
+function moveVia(cid,idx,dir){const c=conns.find(cn=>cn.id===cid);if(!c?.via)return;const ni=idx+dir;if(ni<0||ni>=c.via.length)return;[c.via[idx],c.via[ni]]=[c.via[ni],c.via[idx]];openConnPopover(cid,parseFloat(document.getElementById("connPop")?.style.left||100),parseFloat(document.getElementById("connPop")?.style.top||100))}
+function closePopover(){highlightedConn=null;document.getElementById("popoverRoot").innerHTML="";document.removeEventListener("mousedown",popOutClick);renderSVG()}
+function clearVia(cid){const c=conns.find(cn=>cn.id===cid);if(c){c.via=[];closePopover();render()}}
+function deleteConn(cid){conns=conns.filter(c=>c.id!==cid);closePopover();render()}
+
+/* ═══ NODES: ADD / DELETE ═══ */
+function addNode(type){
+  const r=vp.getBoundingClientRect(),cx=(r.width/2-panX)/zoom,cy=(r.height/2-panY)/zoom;
+  const x=cx+(Math.random()-.5)*80,y=cy+(Math.random()-.5)*80;
+  const nt=NT[type],color=nt.color||COLORS[nodes.length%COLORS.length],id="n_"+(++nxId);
+  const config=type==="vlan"?{vlanId:"",subnet:"",gateway:"",notes:"",devices:[]}:type==="internet"?{ip:"",gateway:"",isp:"",notes:""}:{ip:"",model:"",port:"",notes:""};
+  nodes.push({id,type,label:nt.label,icon:nt.icon,color,x,y,config});render();
+}
+function deleteNode(id){const n=nById(id);if(!n||!confirm('"'+n.label+'" löschen?'))return;nodes=nodes.filter(n2=>n2.id!==id);conns=conns.filter(c=>c.from!==id&&c.to!==id);conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});closePopover();render()}
+
+/* ═══ TABLE VIEW ═══ */
+function renderTableView(){
+  const tv=document.getElementById("tableView");
+  let lg='<div class="tv-legend">';nodes.forEach(n=>{lg+=`<div class="tv-legend-item"><div style="width:7px;height:7px;border-radius:3px;background:${n.color}"></div><span class="mono">${escH(n.label)}</span></div>`});lg+='</div>';
+  let nr="";nodes.forEach(n=>{const cc=conns.filter(c=>c.from===n.id||c.to===n.id).length;const cfg=n.config;nr+=`<tr><td><div style="display:flex;align-items:center;gap:4px"><div class="cd" style="background:${n.color}"></div><span class="vb mono" style="background:${n.color}15;color:${n.color}">${n.icon} ${escH(n.label)}</span></div></td><td class="mono" style="color:var(--bright)">${n.type}</td><td class="mono" style="color:var(--bright)">${cfg.ip||cfg.vlanId||"—"}</td><td class="mono" style="color:var(--bright)">${cfg.subnet||"—"}</td><td style="text-align:center">${cc}</td><td><button class="t-rm" onclick="deleteNode('${n.id}')">✕</button></td></tr>`});
+  let cr="";conns.forEach((cn,idx)=>{const fn=nById(cn.from),tn=nById(cn.to),fc=fn?.color||"#888",tc=tn?.color||"#888";const viaLabels=(cn.via||[]).filter(v=>v.id).map(v=>{const vn=nById(v.id);return vn?`<span class="vb mono" style="background:${vn.color}15;color:${vn.color};font-size:7.5px">${vn.icon} ${escH(vn.label)}</span>`:null}).filter(Boolean);const routeHtml=viaLabels.length?`<div style="display:flex;align-items:center;gap:3px;flex-wrap:wrap;margin-top:2px"><span style="color:var(--muted);font-size:7px">über</span>${viaLabels.join('<span style="color:var(--muted);font-size:8px">→</span>')}</div>`:'';cr+=`<tr><td><div style="display:flex;align-items:center"><div class="cd" style="background:${fc}"></div><span class="vb mono" style="background:${fc}15;color:${fc}">${escH(fn?.label||cn.from)}</span></div></td><td style="color:var(--orange);text-align:center;font-size:13px">→</td><td><div><div style="display:flex;align-items:center"><div class="cd" style="background:${tc}"></div><span class="vb mono" style="background:${tc}15;color:${tc}">${escH(tn?.label||cn.to)}</span></div>${routeHtml}</div></td><td><textarea data-cidx="${idx}" data-cf="port" placeholder="Port(s)">${escH(cn.port)}</textarea></td><td><input type="color" data-cidx="${idx}" data-cf="color" value="${cn.color}"></td><td><button class="t-rm" data-cid="${cn.id}">✕</button></td></tr>`});
+  tv.innerHTML=`${lg}<div class="tv-section"><div class="tv-title"><span>⬡</span> Knoten <span class="tv-count">${nodes.length}</span></div><table class="nt"><thead><tr><th>Name</th><th>Typ</th><th>ID/IP</th><th>Subnetz</th><th style="text-align:center">Verb.</th><th></th></tr></thead><tbody>${nr||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px">Keine Knoten</td></tr>'}</tbody></table></div><div class="tv-section"><div class="tv-title"><span>↔</span> Verbindungen <span class="tv-count">${conns.length}</span><button class="btn btn-g" style="margin-left:auto;font-size:7.5px;padding:3px 9px" onclick="openAddConn()">+ Verbindung</button></div><table class="nt"><thead><tr><th>Von</th><th></th><th>Nach</th><th>Port(s)</th><th>Farbe</th><th></th></tr></thead><tbody>${cr||'<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:18px">Keine</td></tr>'}</tbody></table></div>`;
+  tv.addEventListener("input",function(e){const t=e.target;if(t.dataset.cidx!==undefined){const idx=parseInt(t.dataset.cidx);if(conns[idx])conns[idx][t.dataset.cf]=t.value;renderSVG();renderPL()}});
+  tv.addEventListener("click",function(e){const rm=e.target.closest(".t-rm");if(rm?.dataset.cid){conns=conns.filter(c=>c.id!==parseInt(rm.dataset.cid));render()}});
+}
+function switchTab(t){activeTab=t;document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));document.getElementById("tab-"+t).classList.add("active");document.getElementById("zoomBar").style.display=t==="topo"?"flex":"none";if(t==="table")renderTableView()}
+
+/* ═══ MODALS ═══ */
+function closeModal(){document.getElementById("modalRoot").innerHTML=""}
+function fi(label,val,ph,mono){return`<div class="field"><label>${label}</label><input value="${escH(val)}" placeholder="${ph}" class="${mono?"mi":""}"></div>`}
+function openNodeModal(nodeId){
+  const node=nById(nodeId);if(!node)return;
+  const color=node.color;let title,body;
+  const colorH=`<div class="color-field"><label>Farbe</label><input type="color" value="${color}" data-f="color"><span class="color-hex">${color}</span></div>`;
+  const labelH=`<div class="fr"><div class="field"><label>Bezeichnung</label><input value="${escH(node.label)}" data-f="label"></div><div class="field"><label>Icon</label><select data-f="icon" style="font-size:14px;padding:3px 6px;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${ICONS.map(ic=>`<option value="${ic}"${node.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div>`;
+  if(node.type==="vlan"){
+    const cfg=node.config;title=`${node.icon} ${escH(node.label)}`;
+    body=`${colorH}${labelH}<div class="sep"></div><div class="sl">VLAN</div><div class="fr"><div class="field"><label>VLAN ID</label><input value="${escH(cfg.vlanId)}" data-cfg="vlanId" class="mi" placeholder="10"></div><div class="field"><label>Subnetz</label><input value="${escH(cfg.subnet)}" data-cfg="subnet" class="mi" placeholder="10.0.10.0/24"></div></div><div class="fr"><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.10.1"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Optionale Notizen..."></div></div><div class="sep"></div><div class="sl">Geräte</div><div id="devList"></div>`;
+  } else if(node.type==="internet"){
+    const cfg=node.config;title=`☁ ${escH(node.label)}`;
+    body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>IP-Adresse</label><input value="${escH(cfg.ip)}" data-cfg="ip" class="mi" placeholder="203.0.113.1"></div><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.0.1"></div></div><div class="fr"><div class="field"><label>ISP</label><input value="${escH(cfg.isp)}" data-cfg="isp" placeholder="Provider"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Bandbreite..."></div></div>`;
+  } else {
+    const cfg=node.config,tl={firewall:"Firewall",router:"Router",switch:"Switch"};title=`${node.icon} ${tl[node.type]||node.type}`;
+    body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>IP-Adresse</label><input value="${escH(cfg.ip)}" data-cfg="ip" class="mi" placeholder="10.0.0.1"></div><div class="field"><label>Port</label><input value="${escH(cfg.port)}" data-cfg="port" class="mi" placeholder="443"></div></div><div class="fr"><div class="field"><label>Modell</label><input value="${escH(cfg.model)}" data-cfg="model" placeholder="z.B. Sophos XGS"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Seriennr..."></div></div>`;
+  }
+  document.getElementById("modalRoot").innerHTML=`<div class="modal-overlay" onclick="closeModal()"><div class="modal" style="border:1px solid ${color}44" onclick="event.stopPropagation()"><div class="modal-head" style="border-bottom:1px solid ${color}20;background:linear-gradient(90deg,${color}0e,transparent)"><h2 class="mono" style="color:${color}">${title}</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody">${body}</div></div></div>`;
+  if(node.type==="vlan")renderDevList(nodeId);
+  // Wire inputs
+  const root=document.getElementById("modalBody");
+  root.querySelectorAll("input[data-f],select[data-f]").forEach(inp=>{inp.addEventListener("input",function(){node[this.dataset.f]=this.value;render();if(this.dataset.f==="color"){const hex=root.querySelector(".color-hex");if(hex)hex.textContent=this.value}})});
+  root.querySelectorAll("input[data-cfg]").forEach(inp=>{inp.addEventListener("input",function(){node.config[this.dataset.cfg]=this.value;render()})});
+  escK();
+}
+function renderDevList(nodeId){
+  const el=document.getElementById("devList");if(!el)return;const node=nById(nodeId);if(!node?.config?.devices)return;
+  const devs=node.config.devices,col=node.color,icons=["⎙","🏷","⬡","🖥","📡","🔌","📠","⬢","◉"];
+  let h="";devs.forEach((d,i)=>{h+=`<div class="dv-block" style="border-left-color:${col}44"><div class="dv-head"><span class="dv-name mono" style="color:${col}">${d.icon||"⎙"} ${escH(d.name)}</span><button class="dv-rm mono" onclick="rmDev('${nodeId}',${i})">✕ Entfernen</button></div><div class="fr"><div class="field"><label>Name</label><input value="${escH(d.name)}" oninput="uDev('${nodeId}',${i},'name',this.value)"></div><div class="field"><label>Icon</label><select onchange="uDev('${nodeId}',${i},'icon',this.value)" style="font-size:14px;padding:3px 6px;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${icons.map(ic=>`<option value="${ic}"${d.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div><div class="fr"><div class="field"><label>IP</label><input value="${escH(d.ip||"")}" class="mi" oninput="uDev('${nodeId}',${i},'ip',this.value)" placeholder="10.0.x.x"></div><div class="field"><label>Port(s)</label><input value="${escH(d.port||"")}" class="mi" oninput="uDev('${nodeId}',${i},'port',this.value)" placeholder="443"></div></div><div class="fr"><div class="field"><label>Modell</label><input value="${escH(d.model||"")}" oninput="uDev('${nodeId}',${i},'model',this.value)" placeholder="Modell"></div><div class="field"><label>MAC</label><input value="${escH(d.mac||"")}" class="mi" oninput="uDev('${nodeId}',${i},'mac',this.value)" placeholder="AA:BB:..."></div></div></div>`});
+  h+=`<button class="add-dv" onclick="addDev('${nodeId}')">+ Gerät hinzufügen</button>`;el.innerHTML=h;
+}
+function uDev(nid,i,f,v){const n=nById(nid);if(n?.config?.devices?.[i]){n.config.devices[i][f]=v;if(f==="name"||f==="icon")renderDevList(nid);render()}}
+function addDev(nid){const n=nById(nid);if(!n?.config?.devices)return;n.config.devices.push({id:Date.now()+Math.random()*1000|0,name:"Neues Gerät",icon:"⎙",ip:"",port:"",model:"",mac:"",notes:""});renderDevList(nid);render()}
+function rmDev(nid,i){const n=nById(nid);if(n?.config?.devices){n.config.devices.splice(i,1);renderDevList(nid);render()}}
+
+function openAddConn(){
+  if(nodes.length<2){alert("Mindestens 2 Knoten benötigt");return}
+  const opts=nodes.map(n=>`<option value="${n.id}">${n.icon} ${escH(n.label)}</option>`).join("");
+  document.getElementById("modalRoot").innerHTML=`<div class="modal-overlay" onclick="closeModal()"><div class="modal" style="border:1px solid rgba(34,214,138,.35);max-width:400px" onclick="event.stopPropagation()"><div class="modal-head" style="border-bottom:1px solid rgba(34,214,138,.18)"><h2 class="mono" style="color:var(--green)">+ Neue Verbindung</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="field"><label>Von</label><select id="acF">${opts}</select></div><div class="field"><label>Über (Zwischenstationen)</label><div id="acViaList" style="display:flex;flex-direction:column;gap:2px;margin-bottom:4px"></div><select id="acViaAdd" style="width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;cursor:pointer" onchange="acAddVia()"><option value="">— Zwischenstation hinzufügen —</option>${opts}</select></div><div class="field"><label>Nach</label><select id="acT">${opts}</select></div><div class="field"><label>Farbe</label><input type="color" id="acC" value="${COLORS[conns.length%COLORS.length]}" style="width:50px;height:26px;border:1px solid #1c2844;border-radius:4px;background:rgba(0,0,0,.3);cursor:pointer"></div><div class="field"><label>Port(s)</label><textarea id="acP" placeholder="443, 8080" class="mi" style="width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;font-family:'JetBrains Mono',monospace;resize:vertical;min-height:28px;field-sizing:content"></textarea></div><div id="acE" style="font-size:8.5px;color:var(--red);margin-bottom:5px;display:none"></div><button class="btn btn-g" style="width:100%;padding:8px;font-size:10.5px" onclick="doAddConn()">Erstellen</button></div></div></div>`;escK();
+}
+let acViaIds=[];
+function acAddVia(){const sel=document.getElementById("acViaAdd");if(!sel.value)return;acViaIds.push(sel.value);sel.value="";acRenderVia()}
+function acRemoveVia(i){acViaIds.splice(i,1);acRenderVia()}
+function acRenderVia(){const el=document.getElementById("acViaList");el.innerHTML=acViaIds.map((id,i)=>{const n=nById(id);return`<div style="display:flex;align-items:center;gap:4px;padding:2px 6px;background:rgba(46,156,255,.06);border:1px solid rgba(46,156,255,.15);border-radius:4px"><span class="mono" style="font-size:8.5px;color:var(--accent)">${n?n.icon+" "+escH(n.label):id}</span><button class="btn btn-r" style="font-size:6px;padding:1px 4px;margin-left:auto" onclick="acRemoveVia(${i})">✕</button></div>`}).join("")}
+function doAddConn(){const f=document.getElementById("acF").value,t=document.getElementById("acT").value;if(f===t){document.getElementById("acE").style.display="block";document.getElementById("acE").textContent="Verschiedene Knoten wählen";return}const via=acViaIds.map(id=>({id}));acViaIds=[];conns.push({id:++nxId,from:f,to:t,via,port:document.getElementById("acP").value,color:document.getElementById("acC").value,lx:null,ly:null});closeModal();render()}
+function escK(){document.addEventListener("keydown",function h(e){if(e.key==="Escape"){closeModal();document.removeEventListener("keydown",h)}})}
+
+/* ═══ IMPORT / EXPORT ═══ */
+function doExport(){
+  document.querySelectorAll('.port-label').forEach(el=>{const cid=parseInt(el.dataset.connId),ta=el.querySelector('textarea');if(ta&&cid){const cn=conns.find(c=>c.id===cid);if(cn){cn.plw=ta.offsetWidth;cn.plh=ta.offsetHeight}}});
+  const json=JSON.stringify({version:2,nodes,connections:conns},null,2);
+  const b=new Blob([json],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="netzwerkplan.json";a.click();
+}
+function doImport(){document.getElementById("fileIn").click()}
+function handleImport(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{applyImport(JSON.parse(e.target.result));const btn=document.getElementById("impBtn");btn.textContent="✓ OK";btn.style.color="var(--green)";setTimeout(()=>{btn.textContent="↑ Import";btn.style.color="var(--orange)"},1200)}catch(err){alert("Import-Fehler: "+err.message)}};r.readAsText(file);ev.target.value=""}
+function applyImport(d){
+  if(d.version===2||d.nodes){nodes=d.nodes||[];conns=d.connections||[]}
+  else{alert("Nicht unterstütztes Format. Bitte eine JSON im neuen Format importieren.");return}
+  conns.forEach(c=>{delete c.plw;delete c.plh;if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}if(!c.via)c.via=[]});
+  nxId=Math.max(0,...nodes.map(n=>{const m=n.id.match(/\d+/);return m?parseInt(m[0]):0}),...conns.map(c=>c.id))+1;
+  render();requestAnimationFrame(()=>setTimeout(centerView,60));
+}
+
+/* ═══ INIT ═══ */
+render();requestAnimationFrame(()=>setTimeout(centerView,60));
+</script>
+</body>
+</html>
