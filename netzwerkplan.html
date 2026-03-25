@@ -186,8 +186,8 @@ function renderSVG(){
   const sorted=[...lines].sort((a,b)=>(highlightedConn===a.c.id?1:0)-(highlightedConn===b.c.id?1:0));
   sorted.forEach(L=>{
     const col=L.c.color||"#888",isHl=highlightedConn===L.c.id,pts=L.pts;
-    const sw=isHl?5:2,op=isHl?.85:.5;
-    if(isHl){for(let i=0;i<pts.length-1;i++)h+=`<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="${col}" stroke-opacity=".25" stroke-width="14" stroke-linecap="round"/>`}
+    const sw=isHl?3.5:2,op=isHl?.85:.5;
+    if(isHl){for(let i=0;i<pts.length-1;i++)h+=`<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="${col}" stroke-opacity=".2" stroke-width="9" stroke-linecap="round"/>`}
     for(let i=0;i<pts.length-1;i++)h+=`<line x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="${col}" stroke-opacity="${op}" stroke-width="${sw}"/>`;
     const li=pts.length-1,mx=(pts[li-1].x+pts[li].x)/2,my=(pts[li-1].y+pts[li].y)/2,a=Math.atan2(pts[li].y-pts[li-1].y,pts[li].x-pts[li-1].x)*180/Math.PI;
     h+=`<polygon points="-4,-2.5 4,0 -4,2.5" fill="${col}" fill-opacity="${isHl?.9:.55}" transform="translate(${mx},${my}) rotate(${a})"/>`;
