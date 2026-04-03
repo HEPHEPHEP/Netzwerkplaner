@@ -20,7 +20,7 @@ Visueller Netzwerk-Topologie-Editor im Browser. Eine einzelne HTML-Datei, keine 
 - **Tabellenuebersicht** — alle Knoten und Verbindungen in Tabellenform
 - **JSON Import/Export** — Netzwerkplan als JSON-Datei speichern und laden
 - **Auto-Speichern lokal** — Fortschritt wird im Browser gespeichert und nach Neuladen wiederhergestellt
-- **Oberflaeche auf Deutsch**
+- **Oberfläche auf Deutsch**
 
 ## Nutzung
 
