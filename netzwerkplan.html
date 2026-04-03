@@ -49,11 +49,11 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 .tv-legend-item{display:flex;align-items:center;gap:3px;font-size:8px;color:var(--muted)}
 .node{position:absolute;border-radius:10px;padding:8px 10px;cursor:grab;transition:border-color .2s,box-shadow .2s,background .15s;z-index:3;backdrop-filter:blur(6px)}.node:hover{z-index:6;box-shadow:0 6px 24px rgba(0,0,0,.35)}.node.dragging-node{cursor:grabbing;z-index:20;opacity:.9;transition:none}
 .n-head{display:flex;align-items:center;gap:4px;margin-bottom:2px}.n-icon{font-size:11px}.n-label{font-size:9.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
-.n-sub{font-size:7px;opacity:.6;margin-top:1px}.n-detail{font-size:7.5px;color:var(--muted);margin-top:2px;line-height:1.3}
+.n-sub{font-size:7px;opacity:.6;margin-top:1px}.n-detail{font-size:7.5px;color:var(--muted);margin-top:2px;line-height:1.3;min-height:1.3em}
 .chips{display:flex;flex-wrap:wrap;gap:2px;margin-top:4px}
 .chip{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.25);border:1px solid rgba(26,37,58,.8);border-radius:3px;padding:1px 5px;font-size:7.5px;cursor:pointer;transition:all .12s}.chip:hover{border-color:currentColor;background:rgba(255,255,255,.04)}
 .del-chip{margin-left:auto;color:var(--red);font-size:7px;padding:1px 3px;cursor:pointer;opacity:.3;transition:opacity .15s}.del-chip:hover{opacity:1}
-.cloud-node{position:absolute;z-index:3;cursor:grab;text-align:center;transition:all .2s}.cloud-node:hover{filter:brightness(1.15)}.cloud-node.dragging-node{cursor:grabbing;z-index:20;opacity:.9;transition:none}
+.cloud-node{position:absolute;z-index:3;cursor:grab;text-align:center;transition:box-shadow .2s,opacity .2s}.cloud-node:hover{z-index:6;box-shadow:0 6px 24px rgba(0,0,0,.35)}.cloud-node.dragging-node{cursor:grabbing;z-index:20;opacity:.85;transition:none}
 .port-label{position:absolute;z-index:8;cursor:grab;display:flex;align-items:flex-start;gap:2px;user-select:none}
 .port-label.dragging{cursor:grabbing;z-index:20;opacity:.85}
 .port-label .pl-dot{width:4px;height:4px;border-radius:50%;opacity:.6;flex-shrink:0;margin-top:5px}
@@ -91,6 +91,20 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 .color-field .color-hex{font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--bright);opacity:.6}
 .dv-block{background:rgba(0,0,0,.2);border-radius:6px;border:1px solid #1a2540;padding:8px;margin-bottom:5px;border-left:3px solid rgba(100,100,100,.25)}.dv-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}.dv-name{font-size:8.5px;font-weight:600}.dv-rm{background:rgba(239,83,80,.1);border:1px solid rgba(239,83,80,.2);border-radius:3px;padding:2px 5px;color:var(--red);font-size:6.5px;cursor:pointer}
 .add-dv{width:100%;background:rgba(34,214,138,.06);border:1px dashed rgba(34,214,138,.25);border-radius:5px;padding:6px;color:var(--green);font-size:8.5px;cursor:pointer;font-weight:600}
+.node-modal-wrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:12px;align-items:start}
+.node-modal-main{min-width:0}
+.node-modal-side{background:rgba(0,0,0,.2);border:1px solid #1a2540;border-radius:8px;padding:8px;max-height:62vh;overflow:auto}
+.ncl-section{margin-top:8px}
+.ncl-section:first-of-type{margin-top:0}
+.ncl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.ncl-title{font-size:8px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.1em;color:var(--muted)}
+.ncl-count{font-size:8px;color:var(--muted);background:rgba(255,255,255,.04);border-radius:10px;padding:1px 6px}
+.ncl-item{background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.08);border-radius:6px;padding:5px 6px;margin-bottom:4px}
+.ncl-row{display:flex;align-items:center;gap:5px;font-size:9px}
+.ncl-peer{font-weight:600}
+.ncl-meta{margin-top:3px;font-size:7.5px;color:var(--muted);line-height:1.35}
+.ncl-empty{font-size:8px;color:var(--muted);padding:5px 4px;border:1px dashed rgba(255,255,255,.08);border-radius:5px}
+@media (max-width:900px){.node-modal-wrap{grid-template-columns:1fr}.node-modal-side{max-height:none}}
 .empty-hint{position:absolute;text-align:center;color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;pointer-events:none}
 </style>
 </head>
@@ -101,9 +115,11 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
     <button class="btn btn-o" onclick="addNode('firewall')">+ ⛊ Firewall</button>
     <button class="btn btn-a" onclick="addNode('router')">+ ⬡ Router</button>
     <button class="btn btn-t" onclick="addNode('switch')">+ ⬢ Switch</button>
+    <button class="btn btn-g" onclick="addNode('device')">+ 🖥 Gerät</button>
     <button class="btn btn-t" onclick="addNode('internet')">+ ☁ Internet</button>
     <button class="btn btn-g" onclick="addNode('vlan')">+ ◉ VLAN</button>
     <button class="btn btn-g" onclick="openAddConn()">+ Verbindung</button>
+    <button class="btn btn-r" onclick="startNewPlan()">↺ Neu</button>
     <button class="btn btn-o" id="impBtn" onclick="doImport()">↑ Import</button>
     <button class="btn btn-a" onclick="doExport()">↓ Export</button>
     <input type="file" id="fileIn" accept=".json" style="display:none" onchange="handleImport(event)">
@@ -122,11 +138,30 @@ let nxId=0,zoom=1,panX=0,panY=0,activeTab="topo",highlightedConn=null;
 let dragNode=null,dragStartX=0,dragStartY=0,dragOrigX=0,dragOrigY=0,dragMoved=false;
 let dragWp=null;
 const COLORS=["#ff6b6b","#ffd93d","#6bcb77","#4d96ff","#ff922b","#cc5de8","#20c997","#f06595","#7950f2","#22b8cf","#e64980","#fab005"];
-const NT={firewall:{label:"Firewall",icon:"⛊",color:"#f5923a"},router:{label:"Router",icon:"⬡",color:"#5b8af5"},switch:{label:"Switch",icon:"⬢",color:"#20c9b0"},internet:{label:"Internet",icon:"☁",color:"#8899bb"},vlan:{label:"Neues VLAN",icon:"◉",color:null}};
+const NT={firewall:{label:"Firewall",icon:"⛊",color:"#f5923a"},router:{label:"Router",icon:"⬡",color:"#5b8af5"},switch:{label:"Switch",icon:"⬢",color:"#20c9b0"},device:{label:"Gerät",icon:"🖥",color:"#d4aa32"},internet:{label:"Internet",icon:"☁",color:"#8899bb"},vlan:{label:"Neues VLAN",icon:"◉",color:null}};
 const ICONS=["⬡","⬢","◉","◎","⎙","☁","⬟","△","▢","⏣","🖥","📡","🔌","📠","🏷","⛊"];
+const DEV_ICON_TYPES={"🖥":{one:"PC",many:"PCs"},"⎙":{one:"Drucker",many:"Drucker"},"📠":{one:"Fax",many:"Faxgeräte"},"📡":{one:"Access Point",many:"Access Points"},"⬡":{one:"Router",many:"Router"},"⬢":{one:"Switch",many:"Switches"},"◉":{one:"VLAN-Gerät",many:"VLAN-Geräte"},"🔌":{one:"Gerät",many:"Geräte"},"🏷":{one:"Gerät",many:"Geräte"}};
+const LS_KEY="netzwerkplan.autosave.v2";
+let lsSaveTimer=null;
 
 function nById(id){return nodes.find(n=>n.id===id)}
 function escH(s){return String(s||"").replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+function devTypeLabel(icon,count){const t=DEV_ICON_TYPES[icon]||DEV_ICON_TYPES["🔌"];return count===1?t.one:t.many}
+function normalizeLoadedData(stripPortLabelSize){
+  conns.forEach(c=>{if(stripPortLabelSize){delete c.plw;delete c.plh}if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}if(!c.via)c.via=[]});
+  nxId=Math.max(0,...nodes.map(n=>{const m=String(n.id||"").match(/\d+/);return m?parseInt(m[0]):0}),...conns.map(c=>c.id||0))+1;
+}
+function stateSnapshot(){return{version:2,nodes,connections:conns,savedAt:Date.now()}}
+function saveLocalState(){try{localStorage.setItem(LS_KEY,JSON.stringify(stateSnapshot()))}catch(_err){}}
+function scheduleLocalSave(){if(lsSaveTimer)clearTimeout(lsSaveTimer);lsSaveTimer=setTimeout(saveLocalState,220)}
+function loadLocalState(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);if(!raw)return false;
+    const d=JSON.parse(raw);if(!(d.version===2||d.nodes))return false;
+    nodes=Array.isArray(d.nodes)?d.nodes:[];conns=Array.isArray(d.connections)?d.connections:[];
+    normalizeLoadedData(false);return true;
+  }catch(_err){return false}
+}
 
 /* ═══ ZOOM / PAN ═══ */
 const vp=document.getElementById("viewport"),world=document.getElementById("world");
@@ -141,7 +176,7 @@ function centerView(){const r=vp.getBoundingClientRect();if(nodes.length===0){pa
 
 /* ═══ NODE DRAG ═══ */
 function startDrag(e,id,el){if(e.target.closest(".del-chip"))return;e.preventDefault();e.stopPropagation();const n=nById(id);if(!n)return;dragNode={id,el};dragStartX=e.clientX;dragStartY=e.clientY;dragOrigX=n.x;dragOrigY=n.y;dragMoved=false;el.classList.add("dragging-node");closePopover()}
-function handleDrag(e){if(!dragNode)return;const dx=(e.clientX-dragStartX)/zoom,dy=(e.clientY-dragStartY)/zoom;if(Math.abs(dx)>3||Math.abs(dy)>3)dragMoved=true;const n=nById(dragNode.id);if(!n)return;n.x=dragOrigX+dx;n.y=dragOrigY+dy;const w=parseFloat(dragNode.el.style.width)||160;if(n.type==="internet"){dragNode.el.style.left=(n.x-78)+"px";dragNode.el.style.top=(n.y-34)+"px"}else{dragNode.el.style.left=(n.x-w/2)+"px";dragNode.el.style.top=n.y+"px"}renderSVG();renderPL()}
+function handleDrag(e){if(!dragNode)return;const dx=(e.clientX-dragStartX)/zoom,dy=(e.clientY-dragStartY)/zoom;if(Math.abs(dx)>3||Math.abs(dy)>3)dragMoved=true;const n=nById(dragNode.id);if(!n)return;n.x=dragOrigX+dx;n.y=dragOrigY+dy;const w=parseFloat(dragNode.el.style.width)||160;if(n.type==="internet"){dragNode.el.style.left=(n.x-72)+"px";dragNode.el.style.top=(n.y-29)+"px"}else{dragNode.el.style.left=(n.x-w/2)+"px";dragNode.el.style.top=n.y+"px"}renderSVG();renderPL()}
 function endDrag(e){if(!dragNode)return;dragNode.el.classList.remove("dragging-node");const wasDrag=dragMoved,nk=dragNode.id;dragNode=null;if(!wasDrag)openNodeModal(nk)}
 
 /* ═══ VIA: node refs {id:"n_3"} + free points {x,y} ═══ */
@@ -154,31 +189,56 @@ function addViaNode(cid,nodeId){const c=conns.find(cn=>cn.id===cid);if(!c||!node
 
 /* ═══ COMPUTE LINES ═══ */
 function computeLines(){
-  const groups=new Map(),SPACING=7,result=[];
-  conns.forEach(c=>{const fn=nById(c.from),tn=nById(c.to);if(!fn||!tn)return;const k=[c.from,c.to].sort().join("|");if(!groups.has(k))groups.set(k,[]);groups.get(k).push(c)});
-  for(const[key,entries] of groups){
-    const n=entries.length;
-    entries.forEach((c,i)=>{
-      const fn=nById(c.from),tn=nById(c.to);if(!fn||!tn)return;
-      const viaPts=resolveVia(c);
-      const raw=[{x:fn.x,y:fn.y},...viaPts,{x:tn.x,y:tn.y}];
-      const off=(i-(n-1)/2)*SPACING;
-      const pts=raw.map((p,pi)=>{
-        let dx,dy;
-        if(pi===0){dx=raw[1].x-p.x;dy=raw[1].y-p.y}
-        else if(pi===raw.length-1){dx=p.x-raw[pi-1].x;dy=p.y-raw[pi-1].y}
-        else{dx=raw[pi+1].x-raw[pi-1].x;dy=raw[pi+1].y-raw[pi-1].y}
-        const l=Math.sqrt(dx*dx+dy*dy)||1;
-        return{x:p.x+(-dy/l)*off,y:p.y+(dx/l)*off};
-      });
-      result.push({c,pts,key});
-    });
+  const SPACING=7,result=[];
+  /* build path for each connection */
+  const cpaths=[];
+  conns.forEach(c=>{const fn=nById(c.from),tn=nById(c.to);if(!fn||!tn)return;const via=resolveVia(c);cpaths.push({c,path:[{x:fn.x,y:fn.y,nid:c.from},...via.map(v=>({x:v.x,y:v.y,nid:v.isNode?v.nodeId:null})),{x:tn.x,y:tn.y,nid:c.to}]})});
+  /* group segments by sorted (startNode, endNode) pair — like private version's spoke groups */
+  const spokes=new Map();
+  cpaths.forEach((cp,ci)=>{for(let si=0;si<cp.path.length-1;si++){const a=cp.path[si].nid||`wp${ci}_${si}`,b=cp.path[si+1].nid||`wp${ci}_${si+1}`;const key=[a,b].sort().join("|");if(!spokes.has(key))spokes.set(key,[]);spokes.get(key).push({ci,si})}});
+  /* per spoke pair: perpendicular from segment direction, centered offsets */
+  const segOff=new Map();
+  for(const[key,entries] of spokes){
+    /* use first entry's direction for consistent perpendicular */
+    const e0=entries[0],cp0=cpaths[e0.ci],s0=cp0.path[e0.si],s1=cp0.path[e0.si+1];
+    const dx=s1.x-s0.x,dy=s1.y-s0.y,l=Math.sqrt(dx*dx+dy*dy)||1;
+    const px=-dy/l,py=dx/l;
+    entries.forEach((e,i)=>{const off=(i-(entries.length-1)/2)*SPACING;segOff.set(`${e.ci}-${e.si}`,{ox:px*off,oy:py*off})});
   }
+  /* build pts: 2 points per segment (same offset at both ends → true parallel) */
+  cpaths.forEach((cp,ci)=>{
+    const pts=[];
+    for(let si=0;si<cp.path.length-1;si++){const p0=cp.path[si],p1=cp.path[si+1],o=segOff.get(`${ci}-${si}`)||{ox:0,oy:0};pts.push({x:p0.x+o.ox,y:p0.y+o.oy});pts.push({x:p1.x+o.ox,y:p1.y+o.oy})}
+    result.push({c:cp.c,pts,nSegs:cp.path.length-1});
+  });
   return result;
 }
 
 /* ═══ RENDER ═══ */
-function render(){renderSVG();renderNodes();renderPL();if(activeTab==="table")renderTableView()}
+function render(){renderSVG();renderNodes();renderPL();if(activeTab==="table")renderTableView();refreshOpenNodeConnList();scheduleLocalSave()}
+
+function connRouteText(c){
+  const via=(c.via||[]).filter(v=>v.id).map(v=>{const vn=nById(v.id);return vn?`${vn.icon} ${vn.label}`:v.id});
+  return via.length?via.join(" → "):"";
+}
+function connItemHtml(c,nodeId,isOutgoing){
+  const peerId=isOutgoing?c.to:c.from,peer=nById(peerId);
+  const peerTxt=peer?`${peer.icon} ${peer.label}`:peerId;
+  const route=connRouteText(c),arrow=isOutgoing?"→":"←";
+  return `<div class="ncl-item"><div class="ncl-row"><div class="cd" style="background:${c.color||'#888'}"></div><span class="mono">#${c.id}</span><span style="color:var(--muted)">${arrow}</span><span class="ncl-peer" style="color:${peer?.color||'var(--bright)'}">${escH(peerTxt)}</span></div>${c.port?`<div class="ncl-meta mono">Port(s): ${escH(c.port)}</div>`:""}${route?`<div class="ncl-meta">über ${escH(route)}</div>`:""}</div>`;
+}
+function renderNodeConnList(nodeId){
+  const el=document.getElementById("nodeConnList");
+  if(!el)return;
+  const inc=conns.filter(c=>c.to===nodeId),out=conns.filter(c=>c.from===nodeId);
+  const outHtml=out.length?out.map(c=>connItemHtml(c,nodeId,true)).join(""):'<div class="ncl-empty">Keine ausgehenden Verbindungen</div>';
+  const incHtml=inc.length?inc.map(c=>connItemHtml(c,nodeId,false)).join(""):'<div class="ncl-empty">Keine eingehenden Verbindungen</div>';
+  el.innerHTML=`<div class="ncl-section"><div class="ncl-head"><div class="ncl-title mono">Ausgehend</div><div class="ncl-count mono">${out.length}</div></div>${outHtml}</div><div class="ncl-section"><div class="ncl-head"><div class="ncl-title mono">Eingehend</div><div class="ncl-count mono">${inc.length}</div></div>${incHtml}</div>`;
+}
+function refreshOpenNodeConnList(){
+  const openModal=document.querySelector(".node-edit-modal[data-node-id]");
+  if(openModal)renderNodeConnList(openModal.dataset.nodeId);
+}
 
 function renderSVG(){
   const svg=document.getElementById("svg");let h='';
@@ -192,8 +252,8 @@ function renderSVG(){
     const li=pts.length-1,mx=(pts[li-1].x+pts[li].x)/2,my=(pts[li-1].y+pts[li].y)/2,a=Math.atan2(pts[li].y-pts[li-1].y,pts[li].x-pts[li-1].x)*180/Math.PI;
     h+=`<polygon points="-4,-2.5 4,0 -4,2.5" fill="${col}" fill-opacity="${isHl?.9:.55}" transform="translate(${mx},${my}) rotate(${a})"/>`;
   });
-  sorted.forEach(L=>{const pts=L.pts;for(let i=0;i<pts.length-1;i++)h+=`<line class="conn-hit" x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="transparent" stroke-width="7" data-cid="${L.c.id}" data-seg="${i}"/>`});
-  if(highlightedConn!=null){sorted.filter(L=>L.c.id===highlightedConn).forEach(L=>{(L.c.via||[]).forEach((v,wi)=>{const p=L.pts[wi+1];if(!p)return;const isN=!!v.id;h+=`<circle class="wp-handle" cx="${p.x}" cy="${p.y}" r="${isN?6:5}" fill="${isN?'rgba(46,156,255,.6)':L.c.color||'#888'}" fill-opacity=".7" stroke="${isN?'var(--accent)':'white'}" stroke-width="1.5" data-cid="${L.c.id}" data-wi="${wi}"/>`})})}
+  sorted.forEach(L=>{const pts=L.pts,ns=L.nSegs||Math.floor(pts.length/2);for(let s=0;s<ns;s++){const i=s*2;h+=`<line class="conn-hit" x1="${pts[i].x}" y1="${pts[i].y}" x2="${pts[i+1].x}" y2="${pts[i+1].y}" stroke="transparent" stroke-width="7" data-cid="${L.c.id}" data-seg="${s}"/>`;if(s<ns-1)h+=`<line class="conn-hit" x1="${pts[i+1].x}" y1="${pts[i+1].y}" x2="${pts[i+2].x}" y2="${pts[i+2].y}" stroke="transparent" stroke-width="7" data-cid="${L.c.id}" data-seg="${s}"/>`}});
+  if(highlightedConn!=null){sorted.filter(L=>L.c.id===highlightedConn).forEach(L=>{(L.c.via||[]).forEach((v,wi)=>{const i=wi*2+1,p1=L.pts[i],p2=L.pts[i+1];if(!p1||!p2)return;const px=(p1.x+p2.x)/2,py=(p1.y+p2.y)/2;const isN=!!v.id;h+=`<circle class="wp-handle" cx="${px}" cy="${py}" r="${isN?6:5}" fill="${isN?'rgba(46,156,255,.6)':L.c.color||'#888'}" fill-opacity=".7" stroke="${isN?'var(--accent)':'white'}" stroke-width="1.5" data-cid="${L.c.id}" data-wi="${wi}"/>`})})}
   svg.innerHTML=h;
   svg.querySelectorAll(".conn-hit").forEach(el=>{
     el.addEventListener("click",function(e){e.stopPropagation();openConnPopover(parseInt(this.dataset.cid),e.clientX,e.clientY)});
@@ -211,19 +271,22 @@ function renderNodes(){
   if(nodes.length===0){const h=document.createElement("div");h.className="empty-hint";h.style.cssText="position:absolute;left:1500px;top:1500px;transform:translate(-50%,-50%)";h.innerHTML='<div style="font-size:28px;margin-bottom:8px;opacity:.3">⬡</div><div>Knoten über die Toolbar hinzufügen</div><div style="font-size:8px;margin-top:4px;opacity:.5">oder JSON importieren</div>';w.appendChild(h);return}
   nodes.forEach(node=>{
     if(node.type==="internet"){
-      const el=document.createElement("div");el.className="cloud-node";el.dataset.nid=node.id;el.style.cssText=`left:${node.x-78}px;top:${node.y-34}px;width:156px`;
-      el.innerHTML=`<svg width="116" height="46" viewBox="0 0 120 48" style="display:block;margin:0 auto"><path d="M28,40 C12,40 4,32 4,24 C4,16 12,10 22,10 C24,4 32,0 42,0 C54,0 64,6 66,14 C68,13 71,12 74,12 C84,12 92,18 92,26 C92,26 94,22 100,22 C110,22 116,28 116,34 C116,40 110,44 100,44 L28,44 Z" fill="rgba(136,153,187,.06)" stroke="${node.color}" stroke-width="1.5" stroke-opacity=".5"/></svg><div class="mono" style="font-size:9.5px;font-weight:700;color:${node.color};margin-top:2px">${escH(node.label)}</div><div style="display:flex;justify-content:center;gap:3px;margin-top:1px"><span class="mono" style="font-size:7.5px;color:var(--muted)">${node.config.ip||"Klicken"}</span><span class="del-chip chip" data-nid="${node.id}" style="margin-left:0;font-size:6px;padding:0 3px">✕</span></div>`;
+      const el=document.createElement("div");el.className="cloud-node";el.dataset.nid=node.id;el.style.cssText=`left:${node.x-72}px;top:${node.y-29}px;width:144px`;
+      const CP="M33.6,48 C14.4,48 4.8,38.4 4.8,28.8 C4.8,19.2 14.4,12 26.4,12 C28.8,4.8 38.4,0 50.4,0 C64.8,0 76.8,7.2 79.2,16.8 C81.6,15.6 85.2,14.4 88.8,14.4 C100.8,14.4 110.4,21.6 110.4,31.2 C110.4,31.2 112.8,26.4 120,26.4 C132,26.4 139.2,33.6 139.2,40.8 C139.2,48 132,52.8 120,52.8 L33.6,52.8 Z";
+      el.innerHTML=`<div class="cloud-blur" style="position:absolute;left:0;top:0;width:144px;height:58px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(6,9,15,.35);clip-path:path('${CP}');pointer-events:none;z-index:0"></div><svg width="144" height="58" viewBox="0 0 144 58" style="display:block;pointer-events:none;position:relative;z-index:1"><path d="${CP}" fill="rgba(136,153,187,.06)" stroke="${node.color}" stroke-width="1.5" stroke-opacity=".5"/></svg><div style="position:absolute;left:0;top:0;width:144px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;pointer-events:none"><span class="mono" style="font-size:11px;font-weight:700;color:${node.color}">${escH(node.label)}</span><span class="mono" style="font-size:8.5px;color:var(--muted)">${node.config.ip?escH(node.config.ip):"&nbsp;"}</span></div><div style="position:absolute;right:2px;top:0;z-index:3"><span class="del-chip chip" data-nid="${node.id}" style="font-size:6px;padding:0 3px">✕</span></div>`;
       wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
     } else if(node.type==="vlan"){
       const devs=node.config.devices||[],el=mkN(node,170);el.style.minHeight="60px";
-      let ch=devs.slice(0,5).map(d=>`<span class="chip mono" style="color:${node.color}">${d.icon||"⎙"} ${escH(d.name.length>7?d.name.slice(0,7)+"…":d.name)}</span>`).join("");
-      if(devs.length>5)ch+=`<span class="chip mono" style="color:${node.color}">+${devs.length-5}</span>`;
-      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${node.config.vlanId?"VLAN "+node.config.vlanId:"VLAN —"}</div><div class="n-detail">${node.config.subnet||"Klicken"} · ${devs.length} Geräte</div>${ch?'<div class="chips">'+ch+'</div>':""}`;
+      const grp=new Map();devs.forEach(d=>{const ic=d.icon||"⎙";grp.set(ic,(grp.get(ic)||0)+1)});
+      const vlanDetail=[node.config.subnet?escH(node.config.subnet):"",devs.length>0?`${devs.length} Geräte`:""].filter(Boolean).join(" · ")||"&nbsp;";
+      let ch=[...grp].map(([ic,cnt])=>`<span class="chip mono" style="color:${node.color}">${ic} ${cnt} ${devTypeLabel(ic,cnt)}</span>`).join("");
+      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${node.config.vlanId?"VLAN "+node.config.vlanId:"VLAN —"}</div><div class="n-detail">${vlanDetail}</div>${ch?'<div class="chips">'+ch+'</div>':""}`;
       wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
     } else {
-      const tl={firewall:"FIREWALL",router:"ROUTER",switch:"SWITCH"};
+      const tl={firewall:"FIREWALL",router:"ROUTER",switch:"SWITCH",device:"GERÄT"};
+      const nodeDetail=[node.config.ip?escH(node.config.ip):"",node.config.model?escH(node.config.model):""].filter(Boolean).join(" · ")||"&nbsp;";
       const el=mkN(node,170);
-      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${tl[node.type]||node.type.toUpperCase()}</div><div class="n-detail">${node.config.ip||"Klicken"}${node.config.model?" · "+escH(node.config.model):""}</div>`;
+      el.innerHTML=`<div class="n-head"><span class="n-icon">${node.icon}</span><span class="n-label mono" style="color:${node.color}">${escH(node.label)}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="n-sub mono" style="color:${node.color}">${tl[node.type]||node.type.toUpperCase()}</div><div class="n-detail">${nodeDetail}</div>`;
       wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));w.appendChild(el);
     }
   });
@@ -329,7 +392,7 @@ function openNodeModal(nodeId){
   const node=nById(nodeId);if(!node)return;
   const color=node.color;let title,body;
   const colorH=`<div class="color-field"><label>Farbe</label><input type="color" value="${color}" data-f="color"><span class="color-hex">${color}</span></div>`;
-  const labelH=`<div class="fr"><div class="field"><label>Bezeichnung</label><input value="${escH(node.label)}" data-f="label"></div><div class="field"><label>Icon</label><select data-f="icon" style="font-size:14px;padding:3px 6px;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${ICONS.map(ic=>`<option value="${ic}"${node.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div>`;
+  const labelH=`<div class="fr"><div class="field"><label>Bezeichnung</label><input value="${escH(node.label)}" data-f="label"></div><div class="field"><label>Icon</label><select data-f="icon" style="font-size:14px;padding:3px 6px;background:#0d1220;border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${ICONS.map(ic=>`<option value="${ic}" style="background:#0d1220;color:#dce8f8"${node.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div>`;
   if(node.type==="vlan"){
     const cfg=node.config;title=`${node.icon} ${escH(node.label)}`;
     body=`${colorH}${labelH}<div class="sep"></div><div class="sl">VLAN</div><div class="fr"><div class="field"><label>VLAN ID</label><input value="${escH(cfg.vlanId)}" data-cfg="vlanId" class="mi" placeholder="10"></div><div class="field"><label>Subnetz</label><input value="${escH(cfg.subnet)}" data-cfg="subnet" class="mi" placeholder="10.0.10.0/24"></div></div><div class="fr"><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.10.1"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Optionale Notizen..."></div></div><div class="sep"></div><div class="sl">Geräte</div><div id="devList"></div>`;
@@ -337,24 +400,25 @@ function openNodeModal(nodeId){
     const cfg=node.config;title=`☁ ${escH(node.label)}`;
     body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>IP-Adresse</label><input value="${escH(cfg.ip)}" data-cfg="ip" class="mi" placeholder="203.0.113.1"></div><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.0.1"></div></div><div class="fr"><div class="field"><label>ISP</label><input value="${escH(cfg.isp)}" data-cfg="isp" placeholder="Provider"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Bandbreite..."></div></div>`;
   } else {
-    const cfg=node.config,tl={firewall:"Firewall",router:"Router",switch:"Switch"};title=`${node.icon} ${tl[node.type]||node.type}`;
+    const cfg=node.config,tl={firewall:"Firewall",router:"Router",switch:"Switch",device:"Gerät"};title=`${node.icon} ${tl[node.type]||node.type}`;
     body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>IP-Adresse</label><input value="${escH(cfg.ip)}" data-cfg="ip" class="mi" placeholder="10.0.0.1"></div><div class="field"><label>Port</label><input value="${escH(cfg.port)}" data-cfg="port" class="mi" placeholder="443"></div></div><div class="fr"><div class="field"><label>Modell</label><input value="${escH(cfg.model)}" data-cfg="model" placeholder="z.B. Sophos XGS"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Seriennr..."></div></div>`;
   }
-  document.getElementById("modalRoot").innerHTML=`<div class="modal-overlay" onclick="closeModal()"><div class="modal" style="border:1px solid ${color}44" onclick="event.stopPropagation()"><div class="modal-head" style="border-bottom:1px solid ${color}20;background:linear-gradient(90deg,${color}0e,transparent)"><h2 class="mono" style="color:${color}">${title}</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body" id="modalBody">${body}</div></div></div>`;
+  document.getElementById("modalRoot").innerHTML=`<div class="modal-overlay" onmousedown="if(event.target===this)closeModal()"><div class="modal node-edit-modal" data-node-id="${nodeId}" style="border:1px solid ${color}44;max-width:980px"><div class="modal-head" style="border-bottom:1px solid ${color}20;background:linear-gradient(90deg,${color}0e,transparent)"><h2 class="mono" style="color:${color}">${title}</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="node-modal-wrap"><div class="node-modal-main" id="modalBody">${body}</div><aside class="node-modal-side"><div class="sl">Verbindungen</div><div id="nodeConnList"></div></aside></div></div></div></div>`;
   if(node.type==="vlan")renderDevList(nodeId);
+  renderNodeConnList(nodeId);
   // Wire inputs
   const root=document.getElementById("modalBody");
-  root.querySelectorAll("input[data-f],select[data-f]").forEach(inp=>{inp.addEventListener("input",function(){node[this.dataset.f]=this.value;render();if(this.dataset.f==="color"){const hex=root.querySelector(".color-hex");if(hex)hex.textContent=this.value}})});
-  root.querySelectorAll("input[data-cfg]").forEach(inp=>{inp.addEventListener("input",function(){node.config[this.dataset.cfg]=this.value;render()})});
+  root.querySelectorAll("input[data-f],select[data-f]").forEach(inp=>{inp.addEventListener("input",function(){node[this.dataset.f]=this.value;if(this.dataset.f==="color"){const hex=root.querySelector(".color-hex");if(hex)hex.textContent=this.value}render()})});
+  root.querySelectorAll("input[data-cfg],select[data-cfg],textarea[data-cfg]").forEach(inp=>{inp.addEventListener("input",function(){node.config[this.dataset.cfg]=this.value;render()})});
   escK();
 }
 function renderDevList(nodeId){
   const el=document.getElementById("devList");if(!el)return;const node=nById(nodeId);if(!node?.config?.devices)return;
   const devs=node.config.devices,col=node.color,icons=["⎙","🏷","⬡","🖥","📡","🔌","📠","⬢","◉"];
-  let h="";devs.forEach((d,i)=>{h+=`<div class="dv-block" style="border-left-color:${col}44"><div class="dv-head"><span class="dv-name mono" style="color:${col}">${d.icon||"⎙"} ${escH(d.name)}</span><button class="dv-rm mono" onclick="rmDev('${nodeId}',${i})">✕ Entfernen</button></div><div class="fr"><div class="field"><label>Name</label><input value="${escH(d.name)}" oninput="uDev('${nodeId}',${i},'name',this.value)"></div><div class="field"><label>Icon</label><select onchange="uDev('${nodeId}',${i},'icon',this.value)" style="font-size:14px;padding:3px 6px;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${icons.map(ic=>`<option value="${ic}"${d.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div><div class="fr"><div class="field"><label>IP</label><input value="${escH(d.ip||"")}" class="mi" oninput="uDev('${nodeId}',${i},'ip',this.value)" placeholder="10.0.x.x"></div><div class="field"><label>Port(s)</label><input value="${escH(d.port||"")}" class="mi" oninput="uDev('${nodeId}',${i},'port',this.value)" placeholder="443"></div></div><div class="fr"><div class="field"><label>Modell</label><input value="${escH(d.model||"")}" oninput="uDev('${nodeId}',${i},'model',this.value)" placeholder="Modell"></div><div class="field"><label>MAC</label><input value="${escH(d.mac||"")}" class="mi" oninput="uDev('${nodeId}',${i},'mac',this.value)" placeholder="AA:BB:..."></div></div></div>`});
+  let h="";devs.forEach((d,i)=>{h+=`<div class="dv-block" style="border-left-color:${col}44"><div class="dv-head"><span class="dv-name mono" style="color:${col}">${d.icon||"⎙"} ${escH(d.name)}</span><button class="dv-rm mono" onclick="rmDev('${nodeId}',${i})">✕ Entfernen</button></div><div class="fr"><div class="field"><label>Name</label><input value="${escH(d.name)}" oninput="uDev('${nodeId}',${i},'name',this.value)"></div><div class="field"><label>Icon</label><select onchange="uDev('${nodeId}',${i},'icon',this.value)" style="font-size:14px;padding:3px 6px;background:#0d1220;border:1px solid #1c2844;border-radius:5px;color:var(--bright);cursor:pointer">${icons.map(ic=>`<option value="${ic}" style="background:#0d1220;color:#dce8f8"${d.icon===ic?" selected":""}>${ic}</option>`).join("")}</select></div></div><div class="fr"><div class="field"><label>IP</label><input value="${escH(d.ip||"")}" class="mi" oninput="uDev('${nodeId}',${i},'ip',this.value)" placeholder="10.0.x.x"></div><div class="field"><label>Port(s)</label><input value="${escH(d.port||"")}" class="mi" oninput="uDev('${nodeId}',${i},'port',this.value)" placeholder="443"></div></div><div class="fr"><div class="field"><label>Modell</label><input value="${escH(d.model||"")}" oninput="uDev('${nodeId}',${i},'model',this.value)" placeholder="Modell"></div><div class="field"><label>MAC</label><input value="${escH(d.mac||"")}" class="mi" oninput="uDev('${nodeId}',${i},'mac',this.value)" placeholder="AA:BB:..."></div></div></div>`});
   h+=`<button class="add-dv" onclick="addDev('${nodeId}')">+ Gerät hinzufügen</button>`;el.innerHTML=h;
 }
-function uDev(nid,i,f,v){const n=nById(nid);if(n?.config?.devices?.[i]){n.config.devices[i][f]=v;if(f==="name"||f==="icon")renderDevList(nid);render()}}
+function uDev(nid,i,f,v){const n=nById(nid);if(n?.config?.devices?.[i]){n.config.devices[i][f]=v;if(f==="icon"){renderDevList(nid);render()}}}
 function addDev(nid){const n=nById(nid);if(!n?.config?.devices)return;n.config.devices.push({id:Date.now()+Math.random()*1000|0,name:"Neues Gerät",icon:"⎙",ip:"",port:"",model:"",mac:"",notes:""});renderDevList(nid);render()}
 function rmDev(nid,i){const n=nById(nid);if(n?.config?.devices){n.config.devices.splice(i,1);renderDevList(nid);render()}}
 
@@ -376,17 +440,28 @@ function doExport(){
   const json=JSON.stringify({version:2,nodes,connections:conns},null,2);
   const b=new Blob([json],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="netzwerkplan.json";a.click();
 }
+function startNewPlan(){
+  if(!confirm("Neuen Plan starten? Der aktuelle Plan wird geleert."))return;
+  nodes=[];conns=[];nxId=0;highlightedConn=null;
+  closePopover();closeModal();
+  zoom=1;panX=0;panY=0;
+  document.getElementById("zoomSlider").value=100;
+  document.getElementById("zoomVal").textContent="100%";
+  try{localStorage.removeItem(LS_KEY)}catch(_err){}
+  render();requestAnimationFrame(()=>setTimeout(centerView,60));
+}
 function doImport(){document.getElementById("fileIn").click()}
 function handleImport(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{applyImport(JSON.parse(e.target.result));const btn=document.getElementById("impBtn");btn.textContent="✓ OK";btn.style.color="var(--green)";setTimeout(()=>{btn.textContent="↑ Import";btn.style.color="var(--orange)"},1200)}catch(err){alert("Import-Fehler: "+err.message)}};r.readAsText(file);ev.target.value=""}
 function applyImport(d){
   if(d.version===2||d.nodes){nodes=d.nodes||[];conns=d.connections||[]}
   else{alert("Nicht unterstütztes Format. Bitte eine JSON im neuen Format importieren.");return}
-  conns.forEach(c=>{delete c.plw;delete c.plh;if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}if(!c.via)c.via=[]});
-  nxId=Math.max(0,...nodes.map(n=>{const m=n.id.match(/\d+/);return m?parseInt(m[0]):0}),...conns.map(c=>c.id))+1;
+  normalizeLoadedData(true);
   render();requestAnimationFrame(()=>setTimeout(centerView,60));
 }
 
 /* ═══ INIT ═══ */
+loadLocalState();
+window.addEventListener("beforeunload",()=>{if(lsSaveTimer)clearTimeout(lsSaveTimer);saveLocalState()});
 render();requestAnimationFrame(()=>setTimeout(centerView,60));
 </script>
 </body>
