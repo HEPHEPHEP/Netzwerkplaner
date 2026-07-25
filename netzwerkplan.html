@@ -54,6 +54,17 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 .chip{display:inline-flex;align-items:center;gap:2px;background:rgba(0,0,0,.25);border:1px solid rgba(26,37,58,.8);border-radius:3px;padding:1px 5px;font-size:7.5px;cursor:pointer;transition:all .12s}.chip:hover{border-color:currentColor;background:rgba(255,255,255,.04)}
 .del-chip{margin-left:auto;color:var(--red);font-size:7px;padding:1px 3px;cursor:pointer;opacity:.3;transition:opacity .15s}.del-chip:hover{opacity:1}
 .cloud-node{position:absolute;z-index:3;cursor:grab;text-align:center;transition:box-shadow .2s,opacity .2s}.cloud-node:hover{z-index:6;box-shadow:0 6px 24px rgba(0,0,0,.35)}.cloud-node.dragging-node{cursor:grabbing;z-index:20;opacity:.85;transition:none}
+.group-node{position:absolute;z-index:0;cursor:grab;transition:border-color .2s,background .2s,box-shadow .2s}
+.group-node.dragging-node{cursor:grabbing;opacity:.9;transition:none}
+.group-node.drop-target{box-shadow:0 0 0 2px rgba(46,156,255,.35),0 8px 30px rgba(0,0,0,.35)}
+.group-node .g-head{display:flex;align-items:center;gap:4px;padding:5px 7px;pointer-events:none}
+.group-node .g-title{font-size:9.5px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.group-node .g-count{font-size:7px;color:var(--muted);background:rgba(255,255,255,.05);border-radius:8px;padding:0 5px}
+.group-node .del-chip{pointer-events:all}
+.group-node .g-res{position:absolute;right:2px;bottom:2px;width:11px;height:11px;border-right:1.5px solid;border-bottom:1.5px solid;border-radius:0 0 4px 0;cursor:nwse-resize;opacity:.45}
+.group-node .g-res:hover{opacity:1}
+.gh-link{position:fixed;left:10px;bottom:9px;z-index:95;display:flex;align-items:center;gap:4px;padding:3px 8px;font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-decoration:none;background:rgba(6,9,15,.72);border:1px solid rgba(26,37,64,.5);border-radius:6px;backdrop-filter:blur(8px);transition:color .15s,border-color .15s}
+.gh-link:hover{color:var(--accent);border-color:rgba(46,156,255,.35)}
 .port-label{position:absolute;z-index:8;cursor:grab;display:flex;align-items:flex-start;gap:2px;user-select:none}
 .port-label.dragging{cursor:grabbing;z-index:20;opacity:.85}
 .port-label .pl-dot{width:4px;height:4px;border-radius:50%;opacity:.6;flex-shrink:0;margin-top:5px}
@@ -124,6 +135,7 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
     <button class="btn btn-g" onclick="addNode('device')">+ 🖥 Gerät</button>
     <button class="btn btn-t" onclick="addNode('internet')">+ ☁ Internet</button>
     <button class="btn btn-g" onclick="addNode('vlan')">+ ◉ VLAN</button>
+    <button class="btn btn-a" onclick="addNode('group')">+ ▢ Gruppe</button>
     <button class="btn btn-g" onclick="openAddConn()">+ Verbindung</button>
     <button class="btn btn-r" onclick="startNewPlan()">↺ Neu</button>
     <button class="btn btn-o" id="impBtn" onclick="doImport()">↑ Import</button>
@@ -134,6 +146,7 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 <div class="tab-bar"><button class="tab-btn active" data-tab="topo" onclick="switchTab('topo')">⬡ Topologie</button><button class="tab-btn" data-tab="table" onclick="switchTab('table')">☰ Übersicht</button><div class="zoom-bar" id="zoomBar"><label class="mono">Zoom</label><input type="range" id="zoomSlider" min="40" max="250" value="100" oninput="setZoom(+this.value)"><span class="zoom-val mono" id="zoomVal">100%</span></div></div>
 <div class="tab-content active" id="tab-topo"><div class="viewport" id="viewport"><div class="world" id="world"><svg id="svg" width="3000" height="3000" style="width:3000px;height:3000px"></svg></div></div></div>
 <div class="tab-content" id="tab-table"><div class="table-view" id="tableView"></div></div>
+<a class="gh-link" href="https://github.com/HEPHEPHEP/Netzwerkplaner" target="_blank" rel="noopener noreferrer" title="Quellcode auf GitHub">⬡ Netzwerkplaner auf GitHub ↗</a>
 <div id="modalRoot"></div>
 <div id="popoverRoot"></div>
 
@@ -141,10 +154,10 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 /* ═══ STATE ═══ */
 let nodes=[],conns=[];
 let nxId=0,zoom=1,panX=0,panY=0,activeTab="topo",highlightedConn=null,highlightedNode=null;
-let dragNode=null,dragStartX=0,dragStartY=0,dragOrigX=0,dragOrigY=0,dragMoved=false;
+let dragNode=null,dragStartX=0,dragStartY=0,dragOrigX=0,dragOrigY=0,dragMoved=false,dragGrpMembers=null;
 let dragWp=null;
 const COLORS=["#ff6b6b","#ffd93d","#6bcb77","#4d96ff","#ff922b","#cc5de8","#20c997","#f06595","#7950f2","#22b8cf","#e64980","#fab005"];
-const NT={firewall:{label:"Firewall",icon:"⛊",color:"#f5923a"},router:{label:"Router",icon:"⬡",color:"#5b8af5"},switch:{label:"Switch",icon:"⬢",color:"#20c9b0"},device:{label:"Gerät",icon:"🖥",color:"#d4aa32"},internet:{label:"Internet",icon:"☁",color:"#8899bb"},vlan:{label:"Neues VLAN",icon:"◉",color:null}};
+const NT={firewall:{label:"Firewall",icon:"⛊",color:"#f5923a"},router:{label:"Router",icon:"⬡",color:"#5b8af5"},switch:{label:"Switch",icon:"⬢",color:"#20c9b0"},device:{label:"Gerät",icon:"🖥",color:"#d4aa32"},internet:{label:"Internet",icon:"☁",color:"#8899bb"},vlan:{label:"Neues VLAN",icon:"◉",color:null},group:{label:"Neue Gruppe",icon:"▢",color:null}};
 const ICONS=["⬡","⬢","◉","◎","⎙","☁","⬟","△","▢","⏣","🖥","📡","🔌","📠","🏷","⛊"];
 const ICON_LABELS={"⬡":"Router","⬢":"Switch","◉":"VLAN","◎":"Kreis","⎙":"Drucker","☁":"Cloud","⬟":"Server","△":"Dreieck","▢":"Quadrat","⏣":"Knoten","🖥":"PC","📡":"Access Point","🔌":"Anschluss","📠":"Fax","🏷":"Etikett","⛊":"Firewall"};
 const DEV_ICON_TYPES={"🖥":{one:"PC",many:"PCs"},"⎙":{one:"Drucker",many:"Drucker"},"📠":{one:"Fax",many:"Faxgeräte"},"📡":{one:"Access Point",many:"Access Points"},"⬡":{one:"Router",many:"Router"},"⬢":{one:"Switch",many:"Switches"},"◉":{one:"VLAN-Gerät",many:"VLAN-Geräte"},"🔌":{one:"Gerät",many:"Geräte"},"🏷":{one:"Gerät",many:"Geräte"}};
@@ -157,6 +170,7 @@ function iconLabel(icon){return ICON_LABELS[icon]||"Symbol"}
 function devTypeLabel(icon,count){const t=DEV_ICON_TYPES[icon]||DEV_ICON_TYPES["🔌"];return count===1?t.one:t.many}
 function normalizeLoadedData(stripPortLabelSize){
   conns.forEach(c=>{if(stripPortLabelSize){delete c.plw;delete c.plh}if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}if(!c.via)c.via=[]});
+  nodes.forEach(n=>{if(n.type!=="group")return;if(!n.config)n.config={};n.config.members=(Array.isArray(n.config.members)?n.config.members:[]).filter(id=>nodes.some(o=>o.id===id&&o.type!=="group"))});
   nxId=Math.max(0,...nodes.map(n=>{const m=String(n.id||"").match(/\d+/);return m?parseInt(m[0]):0}),...conns.map(c=>c.id||0))+1;
 }
 function stateSnapshot(){return{version:2,nodes,connections:conns,savedAt:Date.now()}}
@@ -174,7 +188,7 @@ function loadLocalState(){
 /* ═══ ZOOM / PAN ═══ */
 const vp=document.getElementById("viewport"),world=document.getElementById("world");
 let isPan=false,psx,psy,pox,poy;
-vp.addEventListener("mousedown",e=>{if(e.target.closest(".node,.cloud-node,.port-label,.conn-popover,.node-popover,.conn-hit,.wp-handle"))return;isPan=true;vp.classList.add("panning");psx=e.clientX;psy=e.clientY;pox=panX;poy=panY});
+vp.addEventListener("mousedown",e=>{if(e.target.closest(".node,.cloud-node,.group-node,.port-label,.conn-popover,.node-popover,.conn-hit,.wp-handle"))return;isPan=true;vp.classList.add("panning");psx=e.clientX;psy=e.clientY;pox=panX;poy=panY});
 window.addEventListener("mousemove",e=>{if(isPan){panX=pox+(e.clientX-psx);panY=poy+(e.clientY-psy);applyTf()}if(dragNode)handleDrag(e);if(dragWp)handleWpDrag(e)});
 window.addEventListener("mouseup",e=>{isPan=false;vp.classList.remove("panning");if(dragNode)endDrag(e);if(dragWp){dragWp=null}});
 vp.addEventListener("wheel",e=>{e.preventDefault();const r=vp.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top,oz=zoom;let nz=zoom*(e.deltaY<0?1.08:1/1.08);nz=Math.max(.25,Math.min(3.5,nz));panX=mx-(mx-panX)*(nz/oz);panY=my-(my-panY)*(nz/oz);zoom=nz;document.getElementById("zoomSlider").value=Math.round(zoom*100);document.getElementById("zoomVal").textContent=Math.round(zoom*100)+"%";applyTf()},{passive:false});
@@ -182,10 +196,106 @@ function setZoom(v){const r=vp.getBoundingClientRect(),cx=r.width/2,cy=r.height/
 function applyTf(){world.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`}
 function centerView(){const r=vp.getBoundingClientRect();if(nodes.length===0){panX=r.width/2-1500*zoom;panY=r.height/2-1500*zoom}else{let x1=Infinity,y1=Infinity,x2=-Infinity,y2=-Infinity;nodes.forEach(n=>{x1=Math.min(x1,n.x);y1=Math.min(y1,n.y);x2=Math.max(x2,n.x);y2=Math.max(y2,n.y)});panX=r.width/2-((x1+x2)/2)*zoom;panY=r.height/2-((y1+y2)/2)*zoom+20}applyTf()}
 
+/* ═══ GRUPPEN ═══
+   Gruppen sind Rahmen-Kacheln. Mitglieder stehen in config.members und werden
+   mitbewegt, wenn die Gruppe verschoben wird. Eine Kachel gehört zur Gruppe,
+   wenn sie hineingezogen oder im Popover zugeordnet wird. */
+const GRP_W=320,GRP_H=200;
+function gW(n){return n.w||GRP_W}
+function gH(n){return n.h||GRP_H}
+function gRect(n){const w=gW(n),h=gH(n);return{x1:n.x-w/2,y1:n.y-h/2,x2:n.x+w/2,y2:n.y+h/2,w,h}}
+function grpMembers(g){return(g.config?.members||[]).map(nById).filter(Boolean)}
+function groupOf(id){return nodes.find(n=>n.type==="group"&&(n.config?.members||[]).includes(id))||null}
+function groupAtPoint(x,y,skipId){
+  let hit=null;
+  nodes.forEach(n=>{if(n.type!=="group"||n.id===skipId)return;const r=gRect(n);if(x>=r.x1&&x<=r.x2&&y>=r.y1&&y<=r.y2&&(!hit||r.w*r.h<gRect(hit).w*gRect(hit).h))hit=n});
+  return hit;
+}
+function nodeEl(id){return document.querySelector(`.node[data-nid="${id}"],.cloud-node[data-nid="${id}"],.group-node[data-nid="${id}"]`)}
+function positionNodeEl(n,el){
+  if(n.type==="group"){const r=gRect(n);el.style.left=r.x1+"px";el.style.top=r.y1+"px"}
+  else if(n.type==="internet"){el.style.left=(n.x-72)+"px";el.style.top=(n.y-29)+"px"}
+  else{const w=parseFloat(el.style.width)||170;el.style.left=(n.x-w/2)+"px";el.style.top=n.y+"px"}
+}
+function addGroupMember(gid,nid,quiet){
+  const g=nById(gid),n=nById(nid);if(!g||!n||n.type==="group"||g.id===nid)return;
+  const cur=groupOf(nid);if(cur&&cur.id!==gid)rmGroupMember(cur.id,nid,true);
+  if(!Array.isArray(g.config.members))g.config.members=[];
+  if(!g.config.members.includes(nid))g.config.members.push(nid);
+  const r=gRect(g),outside=n.x<r.x1||n.x>r.x2||n.y<r.y1||n.y>r.y2;
+  const clash=grpMembers(g).some(m=>m.id!==nid&&Math.abs(m.x-n.x)<150&&Math.abs(m.y-n.y)<52);
+  if(outside||clash)placeInGroup(g,n);
+  clampIntoGroup(g,n);
+  if(!quiet){renderGrpList(gid);render()}
+}
+function rmGroupMember(gid,nid,quiet){
+  const g=nById(gid);if(!g?.config?.members)return;
+  g.config.members=g.config.members.filter(m=>m!==nid);
+  if(!quiet){renderGrpList(gid);render()}
+}
+function nodeSize(n){const el=nodeEl(n.id);if(el?.offsetWidth)return{w:el.offsetWidth,h:el.offsetHeight};return n.type==="internet"?{w:144,h:58}:{w:170,h:62}}
+/* Kachel vollständig in den Rahmen holen (Titelzeile oben freilassen) */
+function clampIntoGroup(g,n){
+  const r=gRect(g),s=nodeSize(n),pad=8,top=26;
+  const x1=r.x1+pad+s.w/2,x2=r.x2-pad-s.w/2,y1=r.y1+top+s.h/2,y2=r.y2-pad-s.h/2;
+  n.x=x1>x2?(r.x1+r.x2)/2:Math.max(x1,Math.min(x2,n.x));
+  n.y=y1>y2?(r.y1+r.y2)/2+top/2:Math.max(y1,Math.min(y2,n.y));
+}
+/* freien Platz im Rahmen suchen, Gruppe bei Bedarf nach unten wachsen lassen */
+function placeInGroup(g,n){
+  const r=gRect(g),cols=Math.max(1,Math.floor((r.w-16)/180)),colW=(r.w-16)/cols,rowH=64;
+  const others=grpMembers(g).filter(m=>m.id!==n.id);
+  for(let row=0;row<60;row++)for(let c=0;c<cols;c++){
+    const cx=r.x1+8+colW*(c+.5),cy=r.y1+30+rowH*(row+.5);
+    if(others.some(m=>Math.abs(m.x-cx)<colW*.5&&Math.abs(m.y-cy)<rowH*.85))continue;
+    n.x=cx;n.y=cy;
+    const need=cy+rowH/2+8-r.y1;if(need>r.h){g.h=need;g.y=r.y1+need/2}
+    return;
+  }
+}
+
 /* ═══ NODE DRAG ═══ */
-function startDrag(e,id,el){if(e.target.closest(".del-chip"))return;e.preventDefault();e.stopPropagation();const n=nById(id);if(!n)return;dragNode={id,el};dragStartX=e.clientX;dragStartY=e.clientY;dragOrigX=n.x;dragOrigY=n.y;dragMoved=false;el.classList.add("dragging-node");closePopover()}
-function handleDrag(e){if(!dragNode)return;const dx=(e.clientX-dragStartX)/zoom,dy=(e.clientY-dragStartY)/zoom;if(Math.abs(dx)>3||Math.abs(dy)>3)dragMoved=true;const n=nById(dragNode.id);if(!n)return;n.x=dragOrigX+dx;n.y=dragOrigY+dy;const w=parseFloat(dragNode.el.style.width)||160;if(n.type==="internet"){dragNode.el.style.left=(n.x-72)+"px";dragNode.el.style.top=(n.y-29)+"px"}else{dragNode.el.style.left=(n.x-w/2)+"px";dragNode.el.style.top=n.y+"px"}renderSVG();renderPL()}
-function endDrag(e){if(!dragNode)return;dragNode.el.classList.remove("dragging-node");const wasDrag=dragMoved,nk=dragNode.id;dragNode=null;if(!wasDrag)openNodeModal(nk,e.clientX,e.clientY)}
+function startDrag(e,id,el){if(e.target.closest(".del-chip,.g-res"))return;e.preventDefault();e.stopPropagation();const n=nById(id);if(!n)return;dragNode={id,el};dragStartX=e.clientX;dragStartY=e.clientY;dragOrigX=n.x;dragOrigY=n.y;dragMoved=false;dragGrpMembers=n.type==="group"?grpMembers(n).map(m=>({n:m,ox:m.x,oy:m.y})):null;el.classList.add("dragging-node");closePopover()}
+function handleDrag(e){
+  if(!dragNode)return;
+  const dx=(e.clientX-dragStartX)/zoom,dy=(e.clientY-dragStartY)/zoom;
+  if(Math.abs(dx)>3||Math.abs(dy)>3)dragMoved=true;
+  const n=nById(dragNode.id);if(!n)return;
+  n.x=dragOrigX+dx;n.y=dragOrigY+dy;positionNodeEl(n,dragNode.el);
+  if(dragGrpMembers)dragGrpMembers.forEach(m=>{m.n.x=m.ox+dx;m.n.y=m.oy+dy;const el=nodeEl(m.n.id);if(el)positionNodeEl(m.n,el)});
+  else{
+    const g=groupAtPoint(n.x,n.y,n.id);
+    document.querySelectorAll(".group-node.drop-target").forEach(el=>{if(!g||el.dataset.nid!==g.id)el.classList.remove("drop-target")});
+    if(g){const ge=nodeEl(g.id);if(ge)ge.classList.add("drop-target")}
+  }
+  renderSVG();renderPL();
+}
+function endDrag(e){
+  if(!dragNode)return;
+  dragNode.el.classList.remove("dragging-node");
+  const wasDrag=dragMoved,nk=dragNode.id,n=nById(nk),wasGroup=!!dragGrpMembers;
+  dragNode=null;dragGrpMembers=null;
+  document.querySelectorAll(".group-node.drop-target").forEach(el=>el.classList.remove("drop-target"));
+  if(!wasDrag){openNodeModal(nk,e.clientX,e.clientY);return}
+  if(n&&!wasGroup){
+    const tgt=groupAtPoint(n.x,n.y,nk),cur=groupOf(nk);
+    if(tgt!==cur){if(cur)rmGroupMember(cur.id,nk,true);if(tgt)addGroupMember(tgt.id,nk,true)}
+  }
+  render();
+}
+function startGroupResize(e,id,el){
+  e.preventDefault();e.stopPropagation();
+  const n=nById(id);if(!n)return;
+  const sx=e.clientX,sy=e.clientY,ow=gW(n),oh=gH(n),x1=n.x-ow/2,y1=n.y-oh/2;
+  function mv(ev){
+    const w=Math.max(140,ow+(ev.clientX-sx)/zoom),h=Math.max(80,oh+(ev.clientY-sy)/zoom);
+    n.w=w;n.h=h;n.x=x1+w/2;n.y=y1+h/2;
+    el.style.width=w+"px";el.style.height=h+"px";positionNodeEl(n,el);
+    renderSVG();renderPL();
+  }
+  function up(){document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up);grpMembers(n).forEach(m=>clampIntoGroup(n,m));render()}
+  document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up);
+}
 
 /* ═══ VIA: node refs {id:"n_3"} + free points {x,y} ═══ */
 function resolveVia(c){return(c.via||[]).map(v=>{if(v.id){const n=nById(v.id);return n?{x:n.x,y:n.y,isNode:true,nodeId:v.id}:null}return{x:v.x,y:v.y}}).filter(Boolean)}
@@ -275,11 +385,19 @@ function renderSVG(){
 }
 
 function renderNodes(){
-  document.querySelectorAll(".node,.cloud-node,.empty-hint").forEach(el=>el.remove());
+  document.querySelectorAll(".node,.cloud-node,.group-node,.empty-hint").forEach(el=>el.remove());
   const w=document.getElementById("world");
   if(nodes.length===0){const h=document.createElement("div");h.className="empty-hint";h.style.cssText="position:absolute;left:1500px;top:1500px;transform:translate(-50%,-50%)";h.innerHTML='<div style="font-size:28px;margin-bottom:8px;opacity:.3">⬡</div><div>Knoten über die Toolbar hinzufügen</div><div style="font-size:8px;margin-top:4px;opacity:.5">oder JSON importieren</div>';w.appendChild(h);return}
   nodes.forEach(node=>{
-    if(node.type==="internet"){
+    if(node.type==="group"){
+      const r=gRect(node),cnt=grpMembers(node).length;
+      const el=document.createElement("div");el.className="group-node";el.dataset.nid=node.id;
+      el.style.cssText=`left:${r.x1}px;top:${r.y1}px;width:${r.w}px;height:${r.h}px;border:1.5px dashed ${node.color}55;border-radius:12px;background:linear-gradient(135deg,${node.color}0a,rgba(6,9,15,.25))`;
+      el.innerHTML=`<div class="g-head"><span class="n-icon" style="font-size:10px">${node.icon}</span><span class="g-title mono" style="color:${node.color}">${escH(node.label)}</span><span class="g-count mono">${cnt}</span><span class="del-chip chip" data-nid="${node.id}">✕</span></div><div class="g-res" style="border-color:${node.color}"></div>`;
+      wireDel(el);el.addEventListener("mousedown",e=>startDrag(e,node.id,el));
+      el.querySelector(".g-res").addEventListener("mousedown",e=>startGroupResize(e,node.id,el));
+      w.appendChild(el);
+    } else if(node.type==="internet"){
       const el=document.createElement("div");el.className="cloud-node";el.dataset.nid=node.id;el.style.cssText=`left:${node.x-72}px;top:${node.y-29}px;width:144px`;
       const CP="M33.6,48 C14.4,48 4.8,38.4 4.8,28.8 C4.8,19.2 14.4,12 26.4,12 C28.8,4.8 38.4,0 50.4,0 C64.8,0 76.8,7.2 79.2,16.8 C81.6,15.6 85.2,14.4 88.8,14.4 C100.8,14.4 110.4,21.6 110.4,31.2 C110.4,31.2 112.8,26.4 120,26.4 C132,26.4 139.2,33.6 139.2,40.8 C139.2,48 132,52.8 120,52.8 L33.6,52.8 Z";
       el.innerHTML=`<div class="cloud-blur" style="position:absolute;left:0;top:0;width:144px;height:58px;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);background:rgba(6,9,15,.35);clip-path:path('${CP}');pointer-events:none;z-index:0"></div><svg width="144" height="58" viewBox="0 0 144 58" style="display:block;pointer-events:none;position:relative;z-index:1"><path d="${CP}" fill="rgba(136,153,187,.06)" stroke="${node.color}" stroke-width="1.5" stroke-opacity=".5"/></svg><div style="position:absolute;left:0;top:0;width:144px;height:58px;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;pointer-events:none"><span class="mono" style="font-size:11px;font-weight:700;color:${node.color}">${escH(node.label)}</span><span class="mono" style="font-size:8.5px;color:var(--muted)">${node.config.ip?escH(node.config.ip):"&nbsp;"}</span></div><div style="position:absolute;right:2px;top:0;z-index:3"><span class="del-chip chip" data-nid="${node.id}" style="font-size:6px;padding:0 3px">✕</span></div>`;
@@ -456,10 +574,12 @@ function addNode(type){
   const r=vp.getBoundingClientRect(),cx=(r.width/2-panX)/zoom,cy=(r.height/2-panY)/zoom;
   const x=cx+(Math.random()-.5)*80,y=cy+(Math.random()-.5)*80;
   const nt=NT[type],color=nt.color||COLORS[nodes.length%COLORS.length],id="n_"+(++nxId);
-  const config=type==="vlan"?{vlanId:"",subnet:"",gateway:"",notes:"",devices:[]}:type==="internet"?{ip:"",gateway:"",isp:"",notes:""}:{ip:"",model:"",port:"",notes:""};
-  nodes.push({id,type,label:nt.label,icon:nt.icon,color,x,y,config});render();
+  const config=type==="vlan"?{vlanId:"",subnet:"",gateway:"",notes:"",devices:[]}:type==="internet"?{ip:"",gateway:"",isp:"",notes:""}:type==="group"?{notes:"",members:[]}:{ip:"",model:"",port:"",notes:""};
+  const node={id,type,label:nt.label,icon:nt.icon,color,x,y,config};
+  if(type==="group"){node.w=GRP_W;node.h=GRP_H}
+  nodes.push(node);render();
 }
-function deleteNode(id){const n=nById(id);if(!n||!confirm('"'+n.label+'" löschen?'))return;nodes=nodes.filter(n2=>n2.id!==id);conns=conns.filter(c=>c.from!==id&&c.to!==id);conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});closePopover();render()}
+function deleteNode(id){const n=nById(id);if(!n||!confirm('"'+n.label+'" löschen?'))return;nodes=nodes.filter(n2=>n2.id!==id);conns=conns.filter(c=>c.from!==id&&c.to!==id);conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});nodes.forEach(n2=>{if(n2.type==="group"&&Array.isArray(n2.config?.members))n2.config.members=n2.config.members.filter(m=>m!==id)});closePopover();render()}
 
 /* ═══ TABLE VIEW ═══ */
 function renderTableView(){
@@ -486,6 +606,9 @@ function openNodeModal(nodeId,screenX,screenY){
   if(node.type==="vlan"){
     const cfg=node.config;title=`${node.icon} ${escH(node.label)}`;
     body=`${colorH}${labelH}<div class="sep"></div><div class="sl">VLAN</div><div class="fr"><div class="field"><label>VLAN ID</label><input value="${escH(cfg.vlanId)}" data-cfg="vlanId" class="mi" placeholder="10"></div><div class="field"><label>Subnetz</label><input value="${escH(cfg.subnet)}" data-cfg="subnet" class="mi" placeholder="10.0.10.0/24"></div></div><div class="fr"><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.10.1"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Optionale Notizen..."></div></div><div class="sep"></div><div class="sl">Geräte</div><div id="devList"></div>`;
+  } else if(node.type==="group"){
+    const cfg=node.config;title=`${node.icon} ${escH(node.label)}`;
+    body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>Breite</label><input value="${Math.round(gW(node))}" data-size="w" class="mi" placeholder="320"></div><div class="field"><label>Höhe</label><input value="${Math.round(gH(node))}" data-size="h" class="mi" placeholder="200"></div></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes||"")}" data-cfg="notes" placeholder="Optionale Notizen..."></div><div class="sep"></div><div class="sl">Inhalt</div><div id="grpList"></div>`;
   } else if(node.type==="internet"){
     const cfg=node.config;title=`☁ ${escH(node.label)}`;
     body=`${colorH}${labelH}<div class="sep"></div><div class="fr"><div class="field"><label>IP-Adresse</label><input value="${escH(cfg.ip)}" data-cfg="ip" class="mi" placeholder="203.0.113.1"></div><div class="field"><label>Gateway</label><input value="${escH(cfg.gateway)}" data-cfg="gateway" class="mi" placeholder="10.0.0.1"></div></div><div class="fr"><div class="field"><label>ISP</label><input value="${escH(cfg.isp)}" data-cfg="isp" placeholder="Provider"></div><div class="field"><label>Notizen</label><input value="${escH(cfg.notes)}" data-cfg="notes" placeholder="Bandbreite..."></div></div>`;
@@ -499,11 +622,21 @@ function openNodeModal(nodeId,screenX,screenY){
   if(pop){const r=pop.getBoundingClientRect();if(r.right>window.innerWidth-10)pop.style.left=Math.max(10,window.innerWidth-r.width-10)+"px";if(r.bottom>window.innerHeight-10)pop.style.top=Math.max(10,window.innerHeight-r.height-10)+"px"}
   head.addEventListener("mousedown",e=>{if(e.target.tagName==="BUTTON")return;e.preventDefault();const sx=e.clientX,sy=e.clientY,ox=parseFloat(pop.style.left),oy=parseFloat(pop.style.top);head.classList.add("dragging-pop");function mv(ev){pop.style.left=(ox+(ev.clientX-sx))+"px";pop.style.top=(oy+(ev.clientY-sy))+"px"}function up(){head.classList.remove("dragging-pop");document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up)}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)});
   if(node.type==="vlan")renderDevList(nodeId);
+  if(node.type==="group")renderGrpList(nodeId);
   renderNodeConnList(nodeId);
   const root=document.getElementById("modalBody");
+  root.querySelectorAll("input[data-size]").forEach(inp=>{inp.addEventListener("input",function(){const v=parseFloat(this.value);if(!isFinite(v))return;const r=gRect(node);if(this.dataset.size==="w"){node.w=Math.max(140,v);node.x=r.x1+node.w/2}else{node.h=Math.max(80,v);node.y=r.y1+node.h/2}grpMembers(node).forEach(m=>clampIntoGroup(node,m));render()})});
   root.querySelectorAll("input[data-f],select[data-f]").forEach(inp=>{inp.addEventListener("input",function(){node[this.dataset.f]=this.value;if(this.dataset.f==="color"){const hex=root.querySelector(".color-hex");if(hex)hex.textContent=this.value}render()})});
   root.querySelectorAll("input[data-cfg],select[data-cfg],textarea[data-cfg]").forEach(inp=>{inp.addEventListener("input",function(){node.config[this.dataset.cfg]=this.value;render()})});
   
+}
+function renderGrpList(nodeId){
+  const el=document.getElementById("grpList");if(!el)return;const g=nById(nodeId);if(g?.type!=="group")return;
+  const members=grpMembers(g);
+  let h=members.length?members.map(m=>`<div class="dv-block" style="border-left-color:${m.color}44"><div class="dv-head" style="margin-bottom:0"><span class="dv-name mono" style="color:${m.color}">${m.icon} ${escH(m.label)}</span><button class="dv-rm mono" onclick="rmGroupMember('${nodeId}','${m.id}')">✕ Herausnehmen</button></div></div>`).join(""):'<div class="ncl-empty">Noch leer — Kachel hineinziehen oder unten auswählen</div>';
+  const cand=nodes.filter(n=>n.type!=="group"&&n.id!==nodeId&&!groupOf(n.id));
+  h+=`<div class="field" style="margin-top:6px"><label>Kachel hinzufügen</label><select onchange="if(this.value)addGroupMember('${nodeId}',this.value)" style="cursor:pointer"><option value="">— Kachel wählen —</option>${cand.map(n=>`<option value="${n.id}">${n.icon} ${escH(n.label)}</option>`).join("")}</select>${cand.length?"":'<div style="font-size:7.5px;color:var(--muted);margin-top:3px">Alle übrigen Kacheln sind bereits zugeordnet</div>'}</div>`;
+  el.innerHTML=h;
 }
 function renderDevList(nodeId){
   const el=document.getElementById("devList");if(!el)return;const node=nById(nodeId);if(!node?.config?.devices)return;
