@@ -13,6 +13,9 @@ Visueller Netzwerk-Topologie-Editor im Browser. Eine einzelne HTML-Datei, keine 
 - **Freie Geräte-Knoten** — z. B. Server als eigenständige Kacheln ausserhalb von VLANs
 - **VLAN-Geräteverwaltung** — Geräte wie PCs, Drucker etc. innerhalb von VLANs verwalten (Name, IP, MAC, Modell)
 - **Drag & Drop** — Knoten frei auf der Zeichenfläche positionieren
+- **Toolpalette für Formen** — Rechteck, Kreis, Dreieck, Raute, Sechseck, Linie, Pfeil, Doppelpfeil und Text frei im Plan platzieren (Farbe, Füllung, Linienstärke, Drehung, Ebene)
+- **Markieren & Verknüpfen** — Kacheln und Formen per Shift+Klick oder Auswahlrahmen markieren und verknüpfen; verknüpfte Objekte werden gemeinsam verschoben
+- **Undo/Redo** — alle Änderungen am Plan schrittweise zurücknehmen und wiederholen (Strg+Z / Strg+Y)
 - **Verbindungsrouting** — Verbindungen über Zwischenknoten (Wegpunkte) führen
 - **Parallele Verbindungen** — mehrere Verbindungen zwischen gleichen Knoten mit senkrechtem Versatz
 - **Verbindungs-Highlighting** — Verbindungen hervorheben und Port-Labels direkt inline bearbeiten
