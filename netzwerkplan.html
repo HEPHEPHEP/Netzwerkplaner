@@ -159,6 +159,19 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 .conn-popover .field input[type=range]{padding:0;border:none;background:none;accent-color:var(--accent);height:22px;cursor:pointer}
 .sp-check{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text);cursor:pointer;margin:0 0 5px;flex:1 1 40%}
 .sp-check input{width:auto;accent-color:var(--accent);cursor:pointer}
+/* ═══ BESTÄTIGUNGSDIALOG ═══ */
+.confirm-overlay{z-index:3000}
+.confirm-modal{max-width:400px}
+.confirm-modal .modal-head{padding-bottom:2px}
+.confirm-modal .modal-head h2{display:flex;align-items:center;gap:6px}
+.confirm-modal .modal-body{padding-top:4px}
+.cf-msg{font-size:11px;color:var(--bright);line-height:1.55}
+.cf-detail{margin-top:8px;padding:7px 9px;background:rgba(0,0,0,.28);border:1px solid #1a2540;border-radius:6px;font-size:9px;color:var(--text);line-height:1.6;max-height:160px;overflow:auto}
+.cf-detail .vb{margin-right:4px}
+.cf-hint{margin-top:8px;font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.cf-actions{display:flex;gap:6px;padding:4px 15px 14px;justify-content:flex-end}
+.cf-btn{padding:7px 15px;font-size:10px}
+.cf-btn:focus{outline:2px solid rgba(46,156,255,.65);outline-offset:2px}
 </style>
 </head>
 <body>
@@ -207,6 +220,7 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 <a class="gh-link" href="https://github.com/HEPHEPHEP/Netzwerkplaner" target="_blank" rel="noopener noreferrer" title="Quellcode auf GitHub">⬡ Netzwerkplaner auf GitHub ↗</a>
 <div id="modalRoot"></div>
 <div id="popoverRoot"></div>
+<div id="confirmRoot"></div>
 
 <script>
 /* ═══ STATE ═══ */
@@ -662,17 +676,27 @@ function duplicateSelection(){
   ss.forEach(i=>{const c=JSON.parse(JSON.stringify(sById(i)));c.id="s_"+(++nxId);c.x+=26;c.y+=26;c.link=null;shapes.push(c);made.push(c.id)});
   selection.clear();made.forEach(i=>selection.add(i));render();
 }
-function deleteSelection(){
+async function deleteSelection(){
   if(!selection.size)return;
   const ids=[...selection];
-  if(!confirm(ids.length===1?"Markiertes Element löschen?":ids.length+" markierte Elemente löschen?"))return;
-  ids.filter(i=>nById(i)).forEach(id=>{
+  const nIds=ids.filter(i=>nById(i)),sIds=ids.filter(i=>sById(i));
+  const cc=conns.filter(c=>nIds.includes(c.from)||nIds.includes(c.to)).length;
+  const parts=[];
+  if(nIds.length)parts.push(`${nIds.length} Kachel${nIds.length===1?"":"n"}`);
+  if(sIds.length)parts.push(`${sIds.length} Form${sIds.length===1?"":"en"}`);
+  const chips=nIds.map(i=>nodeChip(nById(i))).join("")+sIds.map(i=>{const s=sById(i);const t=(s.text||"").replace(/\n/g," ").slice(0,24);return`<span class="vb mono" style="background:${s.stroke}15;color:${s.stroke}">${SH[s.kind].icon} ${escH(t||SH[s.kind].label)}</span>`}).join("");
+  const ok=await askConfirm({title:ids.length===1?"Element löschen?":"Auswahl löschen?",
+    message:parts.join(" und ")+(ids.length===1?" wird entfernt:":" werden entfernt:"),
+    detail:chips+(cc?`<div style="margin-top:5px;color:var(--muted)">${cc} Verbindung${cc===1?" wird":"en werden"} mit entfernt</div>`:""),
+    hint:"Rückgängig mit Strg+Z"});
+  if(!ok)return;
+  nIds.forEach(id=>{
     nodes=nodes.filter(n=>n.id!==id);
     conns=conns.filter(c=>c.from!==id&&c.to!==id);
     conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});
     nodes.forEach(n=>{if(n.type==="group"&&Array.isArray(n.config?.members))n.config.members=n.config.members.filter(m=>m!==id)});
   });
-  const del=new Set(ids.filter(i=>sById(i)));
+  const del=new Set(sIds);
   shapes=shapes.filter(s=>!del.has(s.id));
   selection.clear();cleanupLinks();closePopover();render();
 }
@@ -1054,7 +1078,17 @@ function addNode(type){
   if(type==="group"){node.w=GRP_W;node.h=GRP_H}
   nodes.push(node);render();
 }
-function deleteNode(id){const n=nById(id);if(!n||!confirm('"'+n.label+'" löschen?'))return;nodes=nodes.filter(n2=>n2.id!==id);conns=conns.filter(c=>c.from!==id&&c.to!==id);conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});nodes.forEach(n2=>{if(n2.type==="group"&&Array.isArray(n2.config?.members))n2.config.members=n2.config.members.filter(m=>m!==id)});selection.delete(id);cleanupLinks();closePopover();render()}
+async function deleteNode(id){
+  const n=nById(id);if(!n)return;
+  const cc=conns.filter(c=>c.from===id||c.to===id).length,mem=n.type==="group"?grpMembers(n).length:0;
+  const notes=[];
+  if(cc)notes.push(`${cc} Verbindung${cc===1?" wird":"en werden"} mit entfernt`);
+  if(mem)notes.push(`${mem} enthaltene Kachel${mem===1?" bleibt":"n bleiben"} erhalten`);
+  const ok=await askConfirm({title:"Kachel löschen?",message:"Diese Kachel wird aus dem Plan entfernt:",
+    detail:nodeChip(n)+(notes.length?`<div style="margin-top:5px;color:var(--muted)">${escH(notes.join(" · "))}</div>`:""),
+    hint:"Rückgängig mit Strg+Z"});
+  if(!ok)return;
+  nodes=nodes.filter(n2=>n2.id!==id);conns=conns.filter(c=>c.from!==id&&c.to!==id);conns.forEach(c=>{if(c.via)c.via=c.via.filter(v=>v.id!==id)});nodes.forEach(n2=>{if(n2.type==="group"&&Array.isArray(n2.config?.members))n2.config.members=n2.config.members.filter(m=>m!==id)});selection.delete(id);cleanupLinks();closePopover();render()}
 
 /* ═══ TASTATUR ═══ */
 document.addEventListener("keydown",e=>{
@@ -1091,6 +1125,56 @@ function renderTableView(){
   }
 }
 function switchTab(t){activeTab=t;document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active",b.dataset.tab===t));document.querySelectorAll(".tab-content").forEach(c=>c.classList.remove("active"));document.getElementById("tab-"+t).classList.add("active");document.getElementById("zoomBar").style.display=t==="topo"?"flex":"none";if(t==="table")renderTableView()}
+
+/* ═══ BESTÄTIGUNGSDIALOG ═══
+   Ersetzt die Browser-Abfrage: eigener Dialog im Stil der App, liefert ein
+   Promise. Enter bestätigt, Esc oder Klick daneben bricht ab; solange er offen
+   ist, gehen keine Tasten an den Plan durch. */
+let cfResolve=null;
+function askConfirm(opts){
+  const o=typeof opts==="string"?{message:opts}:(opts||{});
+  closeConfirm(false);
+  return new Promise(resolve=>{
+    cfResolve=resolve;
+    const danger=o.danger!==false,col=danger?"var(--red)":"var(--accent)";
+    document.getElementById("confirmRoot").innerHTML=`<div class="modal-overlay confirm-overlay" id="cfOverlay">
+      <div class="modal confirm-modal" role="alertdialog" aria-modal="true" style="border:1px solid ${danger?"rgba(239,83,80,.32)":"rgba(46,156,255,.32)"}">
+        <div class="modal-head"><h2 class="mono" style="color:${col}"><span>${o.icon||"⚠"}</span> ${escH(o.title||"Löschen?")}</h2></div>
+        <div class="modal-body">
+          <div class="cf-msg">${escH(o.message||"")}</div>
+          ${o.detail?`<div class="cf-detail">${o.detail}</div>`:""}
+          ${o.hint?`<div class="cf-hint">${escH(o.hint)}</div>`:""}
+        </div>
+        <div class="cf-actions">
+          ${o.single?"":`<button class="btn btn-a cf-btn" id="cfCancel">Abbrechen</button>`}
+          <button class="btn ${danger?"btn-r":"btn-a"} cf-btn" id="cfOk">${escH(o.ok||"Löschen")}</button>
+        </div>
+      </div></div>`;
+    const ov=document.getElementById("cfOverlay");
+    ov.addEventListener("mousedown",e=>{if(e.target===ov)closeConfirm(false)});
+    document.getElementById("cfCancel")?.addEventListener("click",()=>closeConfirm(false));
+    document.getElementById("cfOk").addEventListener("click",()=>closeConfirm(true));
+    document.addEventListener("keydown",cfKey,true);
+    setTimeout(()=>document.getElementById("cfOk")?.focus(),0);
+  });
+}
+function cfKey(e){
+  if(!cfResolve)return;
+  if(e.key==="Escape"){e.preventDefault();e.stopPropagation();closeConfirm(false);return}
+  if(e.key==="Enter"||e.key===" "){if(document.activeElement?.id==="cfCancel"&&e.key===" ")return;e.preventDefault();e.stopPropagation();closeConfirm(document.activeElement?.id!=="cfCancel");return}
+  if(e.key==="Tab"){e.preventDefault();e.stopPropagation();const b=[document.getElementById("cfCancel"),document.getElementById("cfOk")].filter(Boolean);b[(b.indexOf(document.activeElement)+1)%b.length].focus();return}
+  e.stopPropagation();
+}
+/* Hinweis mit einem Button — Ersatz für alert() */
+function showAlert(opts){const o=typeof opts==="string"?{message:opts}:(opts||{});return askConfirm({...o,single:true,ok:o.ok||"OK",danger:o.danger===true})}
+function closeConfirm(val){
+  if(!cfResolve)return;
+  const r=cfResolve;cfResolve=null;
+  document.removeEventListener("keydown",cfKey,true);
+  document.getElementById("confirmRoot").innerHTML="";
+  r(!!val);
+}
+function nodeChip(n){return`<span class="vb mono" style="background:${n.color}15;color:${n.color}">${n.icon} ${escH(n.label)}</span>`}
 
 /* ═══ MODALS ═══ */
 function closeModal(){document.getElementById("modalRoot").innerHTML=""}
@@ -1148,7 +1232,7 @@ function addDev(nid){const n=nById(nid);if(!n?.config?.devices)return;n.config.d
 function rmDev(nid,i){const n=nById(nid);if(n?.config?.devices){n.config.devices.splice(i,1);renderDevList(nid);render()}}
 
 function openAddConn(){
-  if(nodes.length<2){alert("Mindestens 2 Knoten benötigt");return}
+  if(nodes.length<2){showAlert({title:"Zu wenige Knoten",icon:"ℹ",ok:"Verstanden",message:"Für eine Verbindung werden mindestens zwei Knoten gebraucht.",hint:"Knoten über die Schaltflächen oben hinzufügen"});return}
   const opts=nodes.map(n=>`<option value="${n.id}">${n.icon} ${escH(n.label)}</option>`).join("");
   document.getElementById("modalRoot").innerHTML=`<div class="modal-overlay" onclick="closeModal()"><div class="modal" style="border:1px solid rgba(34,214,138,.35);max-width:400px" onclick="event.stopPropagation()"><div class="modal-head" style="border-bottom:1px solid rgba(34,214,138,.18)"><h2 class="mono" style="color:var(--green)">+ Neue Verbindung</h2><button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body"><div class="field"><label>Von</label><select id="acF">${opts}</select></div><div class="field"><label>Über (Zwischenstationen)</label><div id="acViaList" style="display:flex;flex-direction:column;gap:2px;margin-bottom:4px"></div><select id="acViaAdd" style="width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;cursor:pointer" onchange="acAddVia()"><option value="">— Zwischenstation hinzufügen —</option>${opts}</select></div><div class="field"><label>Nach</label><select id="acT">${opts}</select></div><div class="field"><label>Farbe</label><input type="color" id="acC" value="${COLORS[conns.length%COLORS.length]}" style="width:50px;height:26px;border:1px solid #1c2844;border-radius:4px;background:rgba(0,0,0,.3);cursor:pointer"></div><div class="field"><label>Port(s)</label><textarea id="acP" placeholder="443, 8080" class="mi" style="width:100%;background:rgba(0,0,0,.35);border:1px solid #1c2844;border-radius:5px;padding:5px 7px;color:var(--bright);font-size:10.5px;font-family:'JetBrains Mono',monospace;resize:vertical;min-height:28px;field-sizing:content"></textarea></div><div id="acE" style="font-size:8.5px;color:var(--red);margin-bottom:5px;display:none"></div><button class="btn btn-g" style="width:100%;padding:8px;font-size:10.5px" onclick="doAddConn()">Erstellen</button></div></div></div>`;escK();
 }
@@ -1165,8 +1249,16 @@ function doExport(){
   const json=JSON.stringify({version:3,nodes,shapes,connections:conns},null,2);
   const b=new Blob([json],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="netzwerkplan.json";a.click();
 }
-function startNewPlan(){
-  if(!confirm("Neuen Plan starten? Der aktuelle Plan wird geleert."))return;
+async function startNewPlan(){
+  const parts=[];
+  if(nodes.length)parts.push(`${nodes.length} Kachel${nodes.length===1?"":"n"}`);
+  if(conns.length)parts.push(`${conns.length} Verbindung${conns.length===1?"":"en"}`);
+  if(shapes.length)parts.push(`${shapes.length} Form${shapes.length===1?"":"en"}`);
+  const ok=await askConfirm({title:"Neuen Plan starten?",icon:"↺",ok:"Plan leeren",
+    message:parts.length?"Der aktuelle Plan wird geleert:":"Der aktuelle Plan ist bereits leer.",
+    detail:parts.length?`<span class="mono">${escH(parts.join(" · "))}</span>`:"",
+    hint:"Rückgängig mit Strg+Z · vorher ggf. exportieren"});
+  if(!ok)return;
   nodes=[];conns=[];shapes=[];nxId=0;highlightedConn=null;highlightedNode=null;
   selection.clear();setTool("");
   closePopover();closeModal();
@@ -1177,10 +1269,10 @@ function startNewPlan(){
   render();requestAnimationFrame(()=>setTimeout(centerView,60));
 }
 function doImport(){document.getElementById("fileIn").click()}
-function handleImport(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{applyImport(JSON.parse(e.target.result));const btn=document.getElementById("impBtn");btn.textContent="✓ OK";btn.style.color="var(--green)";setTimeout(()=>{btn.textContent="↑ Import";btn.style.color="var(--orange)"},1200)}catch(err){alert("Import-Fehler: "+err.message)}};r.readAsText(file);ev.target.value=""}
+function handleImport(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=function(e){try{applyImport(JSON.parse(e.target.result));const btn=document.getElementById("impBtn");btn.textContent="✓ OK";btn.style.color="var(--green)";setTimeout(()=>{btn.textContent="↑ Import";btn.style.color="var(--orange)"},1200)}catch(err){showAlert({title:"Import fehlgeschlagen",icon:"⚠",danger:true,ok:"Schließen",message:"Die Datei konnte nicht gelesen werden.",detail:`<span class="mono">${escH(err.message)}</span>`,hint:"Erwartet wird eine JSON-Datei aus „↓ Export“"})}};r.readAsText(file);ev.target.value=""}
 function applyImport(d){
   if(d.version>=2||d.nodes){nodes=d.nodes||[];conns=d.connections||[];shapes=d.shapes||[]}
-  else{alert("Nicht unterstütztes Format. Bitte eine JSON im neuen Format importieren.");return}
+  else{showAlert({title:"Format nicht unterstützt",icon:"⚠",danger:true,ok:"Schließen",message:"Diese Datei enthält keinen Netzwerkplan im erwarteten Format.",hint:"Erwartet wird eine JSON-Datei aus „↓ Export“ (Version 2 oder 3)"});return}
   normalizeLoadedData(true);
   render();requestAnimationFrame(()=>setTimeout(centerView,60));
 }
