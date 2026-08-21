@@ -19,6 +19,7 @@ Visueller Netzwerk-Topologie-Editor im Browser. Eine einzelne HTML-Datei, keine 
 - **Verbindungsrouting** — Verbindungen über Zwischenknoten (Wegpunkte) führen
 - **Parallele Verbindungen** — mehrere Verbindungen zwischen gleichen Knoten mit senkrechtem Versatz
 - **Verbindungs-Highlighting** — Verbindungen hervorheben und Port-Labels direkt inline bearbeiten
+- **Animierte Verbindungen** — leuchtende Punkte laufen von der Quelle zum Ziel oder Strichmuster wandern die Linie entlang; pro Verbindung wählbar, ebenso für gestrichelte Formen, global abschaltbar
 - **Zoom & Pan** — stufenloses Zoomen und Verschieben der Zeichenfläche
 - **Tabellenübersicht** — alle Knoten und Verbindungen in Tabellenform
 - **JSON Import/Export** — Netzwerkplan als JSON-Datei speichern und laden

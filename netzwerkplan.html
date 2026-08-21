@@ -159,6 +159,15 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
 .conn-popover .field input[type=range]{padding:0;border:none;background:none;accent-color:var(--accent);height:22px;cursor:pointer}
 .sp-check{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--text);cursor:pointer;margin:0 0 5px;flex:1 1 40%}
 .sp-check input{width:auto;accent-color:var(--accent);cursor:pointer}
+/* ═══ ANIMATION ═══
+   Ein Durchlauf entspricht genau einer Musterlänge (--fp), dadurch läuft die
+   Schleife nahtlos; die Dauer wird aus Musterlänge/Tempo berechnet, damit
+   kurze und lange Verbindungen gleich schnell fließen. */
+@keyframes np-flow{from{stroke-dashoffset:var(--fp,20px)}to{stroke-dashoffset:0}}
+.flow-path{fill:none;animation:np-flow var(--fdur,.5s) linear infinite}
+.sh-anim{animation:np-flow var(--fdur,.5s) linear infinite}
+.anim-off #fsvg{display:none}
+.anim-off .sh-anim{animation:none}
 /* ═══ BESTÄTIGUNGSDIALOG ═══ */
 .confirm-overlay{z-index:3000}
 .confirm-modal{max-width:400px}
@@ -195,7 +204,7 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
   </div>
 </div>
 <div class="tab-bar"><button class="tab-btn active" data-tab="topo" onclick="switchTab('topo')">⬡ Topologie</button><button class="tab-btn" data-tab="table" onclick="switchTab('table')">☰ Übersicht</button><div class="zoom-bar" id="zoomBar"><label class="mono">Zoom</label><input type="range" id="zoomSlider" min="40" max="250" value="100" oninput="setZoom(+this.value)"><span class="zoom-val mono" id="zoomVal">100%</span></div></div>
-<div class="tab-content active" id="tab-topo"><div class="viewport" id="viewport"><div class="world" id="world"><svg id="svg" width="3000" height="3000" style="width:3000px;height:3000px"></svg><svg id="lsvg" width="3000" height="3000" style="width:3000px;height:3000px;z-index:4"></svg></div></div>
+<div class="tab-content active" id="tab-topo"><div class="viewport" id="viewport"><div class="world" id="world"><svg id="svg" width="3000" height="3000" style="width:3000px;height:3000px"></svg><svg id="fsvg" width="3000" height="3000" style="width:3000px;height:3000px;z-index:2"></svg><svg id="lsvg" width="3000" height="3000" style="width:3000px;height:3000px;z-index:4"></svg></div></div>
   <div class="palette" id="palette">
     <button class="pt active" data-tool="" onclick="setTool('')" title="Auswahl · Shift+Klick markiert mehrere · Shift+Ziehen = Rahmen">↖</button>
     <div class="p-sep"></div>
@@ -213,6 +222,8 @@ table.nt input[type=color]{width:24px;height:20px;border:1px solid #1c2844;borde
     <button class="pt" id="btnUnlink" onclick="unlinkSelection()" title="Verknüpfung lösen (Strg+Shift+L)" disabled>⛓</button>
     <button class="pt" id="btnDup" onclick="duplicateSelection()" title="Formen duplizieren (Strg+D)" disabled>⧉</button>
     <button class="pt" id="btnDel" onclick="deleteSelection()" title="Markierte löschen (Entf)" disabled>🗑</button>
+    <div class="p-sep"></div>
+    <button class="pt" id="btnAnim" onclick="toggleAnim()" title="Animationen an/aus">✨</button>
   </div>
   <div class="tool-hint" id="toolHint"></div>
 </div>
@@ -254,7 +265,13 @@ function iconLabel(icon){return ICON_LABELS[icon]||"Symbol"}
 function devTypeLabel(icon,count){const t=DEV_ICON_TYPES[icon]||DEV_ICON_TYPES["🔌"];return count===1?t.one:t.many}
 function idNum(v){const m=String(v||"").match(/\d+/);return m?parseInt(m[0]):0}
 function normalizeLoadedData(stripPortLabelSize){
-  conns.forEach(c=>{if(stripPortLabelSize){delete c.plw;delete c.plh}if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}if(!c.via)c.via=[]});
+  conns.forEach(c=>{
+    if(stripPortLabelSize){delete c.plw;delete c.plh}
+    if(c.waypoints&&!c.via){c.via=c.waypoints;delete c.waypoints}
+    if(!c.via)c.via=[];
+    if(c.anim!==undefined&&c.anim!==""&&!ANIM_MODES[c.anim])delete c.anim;
+    if(c.animSpeed!==undefined&&!(+c.animSpeed>0))delete c.animSpeed;
+  });
   nodes.forEach(n=>{if(n.type!=="group")return;if(!n.config)n.config={};n.config.members=(Array.isArray(n.config.members)?n.config.members:[]).filter(id=>nodes.some(o=>o.id===id&&o.type!=="group"))});
   if(!Array.isArray(shapes))shapes=[];
   shapes.forEach(s=>{
@@ -566,19 +583,21 @@ function shapeGeom(s){
 }
 function shapeSvgHtml(s){
   const w=s.w,h=s.h,sw=s.sw||2,col=s.stroke||"#5b8af5";
-  const dash=s.dash?` stroke-dasharray="${Math.max(6,sw*3)} ${Math.max(4,sw*2.4)}"`:"";
+  const dLen=Math.max(6,sw*3),dGap=Math.max(4,sw*2.4),per=dLen+dGap;
+  const dash=s.dash?` stroke-dasharray="${dLen} ${dGap}"`:"";
+  const anim=(s.dash&&s.anim)?` class="sh-anim" style="--fp:${per.toFixed(2)}px;--fdur:${(per/SH_ANIM_PX).toFixed(3)}s"`:"";
   let b="";
   if(s.kind==="text"){
     b=`<rect class="sh-hit" x="0" y="0" width="${w}" height="${h}" fill="transparent" stroke="none"/>`;
   }else if(isLineKind(s.kind)){
     const y=h/2,hd=Math.max(7,sw*3.2),x1=s.kind==="darrow"?hd*1.1:0,x2=s.kind==="line"?w:w-hd*1.1;
-    b+=`<line x1="${x1}" y1="${y}" x2="${Math.max(x1,x2)}" y2="${y}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"${dash}/>`;
+    b+=`<line x1="${x1}" y1="${y}" x2="${Math.max(x1,x2)}" y2="${y}" stroke="${col}" stroke-width="${sw}" stroke-linecap="round"${dash}${anim}/>`;
     if(s.kind!=="line")b+=`<polygon points="${w},${y} ${w-hd*1.25},${y-hd*.68} ${w-hd*1.25},${y+hd*.68}" fill="${col}"/>`;
     if(s.kind==="darrow")b+=`<polygon points="0,${y} ${hd*1.25},${y-hd*.68} ${hd*1.25},${y+hd*.68}" fill="${col}"/>`;
     b+=`<line class="sh-hit" x1="0" y1="${y}" x2="${w}" y2="${y}" stroke="transparent" stroke-width="16" fill="none"/>`;
   }else{
     const g=shapeGeom(s),filled=(s.fillOp||0)>0;
-    b+=`${g} fill="${filled?s.fill:"none"}" fill-opacity="${s.fillOp||0}" stroke="${col}" stroke-width="${sw}"${dash}/>`;
+    b+=`${g} fill="${filled?s.fill:"none"}" fill-opacity="${s.fillOp||0}" stroke="${col}" stroke-width="${sw}"${dash}${anim}/>`;
     b+=`${g.replace(/^(<[a-z]+)/,'$1 class="sh-hit"')} fill="${filled?"transparent":"none"}" stroke="transparent" stroke-width="16"/>`;
   }
   return`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">${b}</svg>`;
@@ -769,7 +788,7 @@ function openShapePopover(sid,screenX,screenY){
       ${line?"":`<div class="field"><label>Füllung</label><input type="color" value="${s.fill}" oninput="spSet('${sid}','fill',this.value)"></div>
       <div class="field"><label>Deckkraft</label><input type="range" min="0" max="100" value="${Math.round((s.fillOp||0)*100)}" oninput="spSet('${sid}','fillOp',+this.value/100)"></div>`}
     </div>
-    <div class="sp-row"><label class="sp-check"><input type="checkbox" ${s.dash?"checked":""} onchange="spSet('${sid}','dash',this.checked)"> gestrichelt</label>${s.kind==="rect"?`<div class="field"><label>Ecken</label><input type="number" min="0" max="80" value="${s.round||0}" oninput="spSet('${sid}','round',Math.max(0,+this.value||0))" class="mi"></div>`:""}</div>`;
+    <div class="sp-row"><label class="sp-check"><input type="checkbox" data-f="dash" ${s.dash?"checked":""} onchange="spSet('${sid}','dash',this.checked)"> gestrichelt</label><label class="sp-check"><input type="checkbox" ${s.anim?"checked":""} onchange="spSetAnim('${sid}',this.checked)"> animiert</label>${s.kind==="rect"?`<div class="field"><label>Ecken</label><input type="number" min="0" max="80" value="${s.round||0}" oninput="spSet('${sid}','round',Math.max(0,+this.value||0))" class="mi"></div>`:""}</div>`;
   document.getElementById("popoverRoot").innerHTML=`<div class="conn-popover" id="shapePop" style="left:${px}px;top:${py}px;min-width:310px" onclick="event.stopPropagation()">
     <div class="cp-head" id="spHead"><span class="cp-title">${SH[s.kind].icon} ${SH[s.kind].label}</span><button class="cp-close" onclick="closePopover()">✕</button></div>
     <div class="cp-body">
@@ -795,6 +814,13 @@ function openShapePopover(sid,screenX,screenY){
   head.addEventListener("mousedown",e=>{if(e.target.tagName==="BUTTON")return;e.preventDefault();const sx=e.clientX,sy=e.clientY,ox=parseFloat(pop.style.left),oy=parseFloat(pop.style.top);head.classList.add("dragging-pop");function mv(ev){pop.style.left=(ox+(ev.clientX-sx))+"px";pop.style.top=(oy+(ev.clientY-sy))+"px"}function up(){head.classList.remove("dragging-pop");document.removeEventListener("mousemove",mv);document.removeEventListener("mouseup",up)}document.addEventListener("mousemove",mv);document.addEventListener("mouseup",up)});
 }
 function spSet(sid,f,v){const s=sById(sid);if(!s)return;s[f]=v;renderShapes();renderLinkOverlay();scheduleLocalSave()}
+/* Laufende Striche brauchen Striche — deshalb zieht "gestrichelt" mit */
+function spSetAnim(sid,v){
+  const s=sById(sid);if(!s)return;
+  s.anim=v;
+  if(v&&!s.dash){s.dash=true;const cb=document.querySelector('#shapePop .sp-check input[data-f="dash"]');if(cb)cb.checked=true}
+  renderShapes();scheduleLocalSave();
+}
 
 /* ═══ VIA: node refs {id:"n_3"} + free points {x,y} ═══ */
 function resolveVia(c){return(c.via||[]).map(v=>{if(v.id){const n=nById(v.id);return n?{x:n.x,y:n.y,isNode:true,nodeId:v.id}:null}return{x:v.x,y:v.y}}).filter(Boolean)}
@@ -829,6 +855,52 @@ function computeLines(){
     result.push({c:cp.c,pts,nSegs:cp.path.length-1});
   });
   return result;
+}
+
+/* ═══ VERBINDUNGS-ANIMATION ═══
+   Eigene SVG-Ebene: die Pfade werden beim Neuzeichnen nur aktualisiert, nicht
+   neu erzeugt — sonst würde die CSS-Animation bei jedem Render neu anlaufen.
+   Ein/Aus ist eine Ansichtseinstellung und liegt daher nicht im Plan. */
+const ANIM_KEY="netzwerkplan.anim.v1";
+const ANIM_MODES={
+  dots:{label:"Leuchtpunkte",period:26,dash:"0.1 25.9",w:5,cap:"round",px:55,glow:true},
+  dash:{label:"Laufende Striche",period:18,dash:"11 7",w:2.6,cap:"butt",px:42,glow:false}
+};
+const SH_ANIM_PX=42;
+let animOn=(function(){
+  try{const v=localStorage.getItem(ANIM_KEY);if(v!==null)return v==="1"}catch(_err){}
+  return !(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+})();
+/* ohne eigene Angabe fließen Verbindungen als Leuchtpunkte */
+function connAnim(c){const m=c.anim===undefined?"dots":c.anim;return ANIM_MODES[m]?m:""}
+function connSpeed(c){const s=+c.animSpeed;return s>0?s:1}
+function ptsToPath(pts){return pts.map((p,i)=>(i?"L":"M")+p.x.toFixed(1)+" "+p.y.toFixed(1)).join(" ")}
+function applyAnim(){
+  world.classList.toggle("anim-off",!animOn);
+  const b=document.getElementById("btnAnim");
+  if(b){b.classList.toggle("active",animOn);b.title=animOn?"Animationen aus":"Animationen an"}
+}
+function toggleAnim(){animOn=!animOn;try{localStorage.setItem(ANIM_KEY,animOn?"1":"0")}catch(_err){}applyAnim()}
+function renderFlow(lines){
+  const svg=document.getElementById("fsvg");if(!svg)return;
+  const L=lines||computeLines(),seen=new Set(),glowOk=L.length<=40;
+  L.forEach(l=>{
+    const mode=connAnim(l.c);if(!mode)return;
+    const fid="f"+l.c.id;seen.add(fid);
+    let p=svg.querySelector(`[data-fid="${fid}"]`);
+    if(!p){p=document.createElementNS("http://www.w3.org/2000/svg","path");p.setAttribute("class","flow-path");p.setAttribute("data-fid",fid);svg.appendChild(p)}
+    const M=ANIM_MODES[mode],col=l.c.color||"#888";
+    p.setAttribute("d",ptsToPath(l.pts));
+    p.setAttribute("stroke",col);
+    p.setAttribute("stroke-width",M.w);
+    p.setAttribute("stroke-linecap",M.cap);
+    p.setAttribute("stroke-dasharray",M.dash);
+    p.style.setProperty("--fp",M.period+"px");
+    p.style.setProperty("--fdur",(M.period/(M.px*connSpeed(l.c))).toFixed(3)+"s");
+    p.style.filter=(M.glow&&glowOk)?`drop-shadow(0 0 3px ${col})`:"";
+    p.style.opacity=isConnHighlighted(l.c)?"1":".8";
+  });
+  [...svg.children].forEach(el=>{if(!seen.has(el.dataset.fid))el.remove()});
 }
 
 /* ═══ RENDER ═══ */
@@ -881,6 +953,7 @@ function renderSVG(){
     el.addEventListener("mousedown",function(e){startWpDrag(parseInt(this.dataset.cid),parseInt(this.dataset.wi),e)});
     el.addEventListener("contextmenu",function(e){e.preventDefault();removeVia(parseInt(this.dataset.cid),parseInt(this.dataset.wi))});
   });
+  renderFlow(lines);
 }
 
 function renderNodes(){
@@ -1050,6 +1123,10 @@ function openConnPopover(connId,screenX,screenY){
       <div class="cp-field"><label>Port(s)</label><textarea id="cpPort" class="mi" oninput="cpUpdate(${cn.id})" placeholder="443, 8080">${escH(cn.port)}</textarea></div>
       <div class="cp-field"><label>Portfeld</label><label style="display:flex;align-items:center;gap:6px;font-size:9px;color:var(--text);text-transform:none;letter-spacing:0;cursor:pointer;margin:0"><input type="checkbox" id="cpDock"${cn.plFree?"":" checked"} onchange="togglePlDock(${cn.id})" style="width:auto;padding:0;margin:0;border:none;background:none;accent-color:var(--accent);cursor:pointer">an Verbindung andocken</label></div>
       <div class="cp-field"><label>Farbe</label><input type="color" id="cpColor" value="${cn.color}" oninput="cpUpdate(${cn.id})" style="width:100%;height:28px;border:1px solid #1c2844;border-radius:5px;background:rgba(0,0,0,.3);cursor:pointer"></div>
+      <div style="display:flex;gap:6px">
+        <div class="cp-field" style="flex:1;min-width:0"><label>Animation</label><select id="cpAnim" onchange="cpSetAnim(${cn.id})"><option value=""${connAnim(cn)?"":" selected"}>Keine</option>${Object.entries(ANIM_MODES).map(([k,m])=>`<option value="${k}"${connAnim(cn)===k?" selected":""}>${m.label}</option>`).join("")}</select></div>
+        <div class="cp-field" style="flex:0 0 96px"><label>Tempo</label><select id="cpSpeed" onchange="cpSetAnim(${cn.id})">${[[.5,"Langsam"],[1,"Normal"],[2,"Schnell"]].map(([v,l])=>`<option value="${v}"${connSpeed(cn)===v?" selected":""}>${l}</option>`).join("")}</select></div>
+      </div>
       <button class="btn btn-r" style="width:100%;margin-top:8px;padding:6px" onclick="deleteConn(${cn.id})">✕ Verbindung löschen</button>
     </div></div>`;
   const head=document.getElementById("cpHead"),pop=document.getElementById("connPop");
@@ -1062,6 +1139,12 @@ function cpUpdate(cid){
   cn.from=document.getElementById("cpFrom").value;cn.to=document.getElementById("cpTo").value;
   cn.port=document.getElementById("cpPort").value;cn.color=document.getElementById("cpColor").value;
   renderSVG();renderNodes();renderPL();scheduleLocalSave();
+}
+function cpSetAnim(cid){
+  const c=conns.find(x=>x.id===cid);if(!c)return;
+  c.anim=document.getElementById("cpAnim").value;
+  c.animSpeed=+document.getElementById("cpSpeed").value||1;
+  renderFlow();scheduleLocalSave();
 }
 function moveVia(cid,idx,dir){const c=conns.find(cn=>cn.id===cid);if(!c?.via)return;const ni=idx+dir;if(ni<0||ni>=c.via.length)return;preservePl(c,()=>{[c.via[idx],c.via[ni]]=[c.via[ni],c.via[idx]]});renderPL();openConnPopover(cid,parseFloat(document.getElementById("connPop")?.style.left||100),parseFloat(document.getElementById("connPop")?.style.top||100))}
 function closePopover(){highlightedConn=null;highlightedNode=null;document.getElementById("popoverRoot").innerHTML="";document.removeEventListener("mousedown",popOutClick);renderSVG()}
@@ -1280,7 +1363,7 @@ function applyImport(d){
 /* ═══ INIT ═══ */
 loadLocalState();
 window.addEventListener("beforeunload",()=>{if(lsSaveTimer)clearTimeout(lsSaveTimer);saveLocalState()});
-layoutHeader();render();histReset();requestAnimationFrame(()=>{layoutHeader();setTimeout(centerView,60)});
+layoutHeader();applyAnim();render();histReset();requestAnimationFrame(()=>{layoutHeader();setTimeout(centerView,60)});
 </script>
 </body>
 </html>
