@@ -8,7 +8,7 @@ Visueller Netzwerk-Topologie-Editor im Browser. Eine einzelne HTML-Datei, keine 
 ## Funktionen
 
 - **Einzelne HTML-Datei** — kein Build-Prozess, kein Backend, läuft komplett im Browser
-- **Dunkles Theme** — Netzwerk-Topologie-Visualisierung im Dark Mode
+- **Dunkles und helles Theme** — je Ansicht umschaltbar; im hellen Modus werden Farben automatisch kontrastverstärkt
 - **Knotentypen** — Firewall, Router, Switch, Internet, VLAN mit individuellen Icons und Farben
 - **Freie Geräte-Knoten** — z. B. Server als eigenständige Kacheln ausserhalb von VLANs
 - **VLAN-Geräteverwaltung** — Geräte wie PCs, Drucker etc. innerhalb von VLANs verwalten (Name, IP, MAC, Modell)
@@ -20,6 +20,16 @@ Visueller Netzwerk-Topologie-Editor im Browser. Eine einzelne HTML-Datei, keine 
 - **Parallele Verbindungen** — mehrere Verbindungen zwischen gleichen Knoten mit senkrechtem Versatz
 - **Verbindungs-Highlighting** — Verbindungen hervorheben und Port-Labels direkt inline bearbeiten
 - **Animierte Verbindungen** — leuchtende Punkte laufen von der Quelle zum Ziel oder Strichmuster wandern die Linie entlang; pro Verbindung wählbar, ebenso für gestrichelte Formen, global abschaltbar
+- **Skizzenmodus** — vereinfachte Ansicht für Präsentationsgrafiken: Symbole und Bezeichnungen statt IP-Adressen, farbige Bereiche mit Titelbalken; jederzeit zwischen Detail und Skizze umschaltbar, die technischen Daten bleiben erhalten
+- **Symbolbibliothek mit Suche** — über 40 Strichsymbole, z. B. PC, Server, NAS, Switch, Router, Firewall, Konnektor, VPN und Medizingeräte
+- **Eigene Symbole** — Bilder (PNG, JPG, SVG, WebP) hochladen; sie werden verkleinert im Browser gespeichert und beim JSON-Export mitgegeben
+- **Rechtwinklige Verbindungen mit Sammellinien** — mehrere Verbindungen laufen auf einer gemeinsamen Linie zusammen; Pfeile, Linienstärke und Strichart pro Verbindung
+- **Hilfslinien** — Kacheln rasten beim Verschieben an Mitte und Höhe anderer Objekte ein
+- **Bereiche aufräumen** — Kacheln im Raster anordnen und wahlweise den Rahmen an die Kacheln oder die Kacheln an den Rahmen anpassen
+- **Kachelgröße** — 50–200 % für markierte oder alle Kacheln, zusätzlich pro Kachel einstellbar
+- **Freihand und Radiergummi** — mit wählbarer Farbe und Stärke zeichnen; die mittlere Maustaste verschiebt dabei die Zeichenfläche
+- **Portbeschriftungen ein- und ausblendbar** — getrennt für Detail- und Skizzenansicht
+- **PNG-Export** — Plan als Bild speichern (lädt dafür bei Bedarf html2canvas nach)
 - **Zoom & Pan** — stufenloses Zoomen und Verschieben der Zeichenfläche
 - **Tabellenübersicht** — alle Knoten und Verbindungen in Tabellenform
 - **JSON Import/Export** — Netzwerkplan als JSON-Datei speichern und laden
